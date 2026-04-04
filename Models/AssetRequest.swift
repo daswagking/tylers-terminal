@@ -76,5 +76,13 @@ struct AssetRequest: Identifiable, Codable, Equatable {
     
     var formattedTimestamp: String {
         return createdAt.timeAgoDisplay
+       
+        var timeAgoDisplay: String {
+            return createdAt.timeAgoDisplay
+        }
+    
+    }
+    var timeAgoDisplay: String {
+        return createdAt.timeAgoDisplay
     }
 }

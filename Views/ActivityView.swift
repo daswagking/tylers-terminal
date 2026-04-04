@@ -2,8 +2,6 @@
 //  ActivityView.swift
 //  TYLER'S TERMINAL
 //
-//  Activity and notifications screen
-//
 
 import SwiftUI
 
@@ -17,13 +15,8 @@ struct ActivityView: View {
                     .ignoresSafeArea()
                 
                 VStack(spacing: 0) {
-                    // Status Bar
                     statusBar
-                    
-                    // Filter Bar
                     filterBar
-                    
-                    // Notifications List
                     notificationsList
                 }
             }
@@ -63,7 +56,6 @@ struct ActivityView: View {
         }
     }
     
-    // MARK: - Status Bar
     private var statusBar: some View {
         HStack {
             HStack(spacing: 4) {
@@ -94,7 +86,6 @@ struct ActivityView: View {
         .border(TerminalColors.border, width: 1)
     }
     
-    // MARK: - Filter Bar
     private var filterBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
@@ -119,7 +110,6 @@ struct ActivityView: View {
         .border(TerminalColors.border, width: 1)
     }
     
-    // MARK: - Notifications List
     private var notificationsList: some View {
         Group {
             if viewModel.isLoading && viewModel.notifications.isEmpty {
@@ -138,8 +128,8 @@ struct ActivityView: View {
                             }
                         )
                         .listRowBackground(
-                            notification.isRead 
-                                ? TerminalColors.backgroundSecondary 
+                            notification.isRead
+                                ? TerminalColors.backgroundSecondary
                                 : TerminalColors.primary.opacity(0.05)
                         )
                         .listRowSeparator(.hidden)
@@ -160,7 +150,6 @@ struct ActivityView: View {
         }
     }
     
-    // MARK: - Loading View
     private var loadingView: some View {
         VStack(spacing: 16) {
             ProgressView()
@@ -175,7 +164,6 @@ struct ActivityView: View {
         .frame(maxWidth: .infinity)
     }
     
-    // MARK: - Empty View
     private var emptyView: some View {
         VStack(spacing: 16) {
             Image(systemName: "bell.slash")
@@ -185,20 +173,12 @@ struct ActivityView: View {
             Text("NO ACTIVITY")
                 .font(TerminalFonts.caption)
                 .foregroundColor(TerminalColors.textSecondary)
-            
-            if viewModel.selectedFilter != .all {
-                Text("Try changing the filter to see more activity")
-                    .font(TerminalFonts.caption2)
-                    .foregroundColor(TerminalColors.textTertiary)
-                    .multilineTextAlignment(.center)
-            }
         }
         .padding(.vertical, 64)
         .frame(maxWidth: .infinity)
     }
 }
 
-// MARK: - Notification Row
 struct NotificationRow: View {
     let notification: AppNotification
     let onTap: () -> Void
@@ -206,7 +186,6 @@ struct NotificationRow: View {
     var body: some View {
         Button(action: onTap) {
             HStack(spacing: 12) {
-                // Icon
                 ZStack {
                     Rectangle()
                         .fill(TerminalColors.backgroundTertiary)
@@ -218,7 +197,6 @@ struct NotificationRow: View {
                         .foregroundColor(Color(hex: notification.type.color))
                 }
                 
-                // Content
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(notification.type.displayName)
@@ -243,7 +221,6 @@ struct NotificationRow: View {
                         .lineLimit(2)
                 }
                 
-                // Unread Indicator
                 if !notification.isRead {
                     Circle()
                         .fill(TerminalColors.primary)
@@ -254,14 +231,5 @@ struct NotificationRow: View {
             .padding(.horizontal, 4)
         }
         .buttonStyle(PlainButtonStyle())
-    }
-}
-
-// MARK: - Preview
-struct ActivityView_Previews: PreviewProvider {
-    static var previews: some View {
-        ActivityView()
-            .environmentObject(ActivityViewModel())
-            .preferredColorScheme(.dark)
     }
 }

@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Combine
 
 struct AdminPanelView: View {
     @EnvironmentObject var authViewModel: AuthViewModel
@@ -400,6 +401,62 @@ struct AdminAnalyticsView: View {
                 .foregroundColor(TerminalColors.textSecondary)
             
             Spacer()
+        }
+    }
+}
+
+// MARK: - Admin Panel ViewModel
+@MainActor
+class AdminPanelViewModel: ObservableObject {
+    @Published var allPosts: [Post] = []
+    @Published var allUsers: [User] = []
+    @Published var isLoading = false
+    @Published var errorMessage: String?
+    
+    var totalReactions: Int {
+        allPosts.reduce(0) { $0 + $1.fireCount + $1.hundredCount + $1.heartCount }
+    }
+    
+    var totalComments: Int {
+        allPosts.reduce(0) { $0 + $1.commentCount }
+    }
+    
+    func loadData() async {
+        await loadPosts()
+        await loadUsers()
+    }
+    
+    func loadPosts() async {
+        do {
+            allPosts = try await SupabaseService.shared.fetchAllPosts()
+        } catch {
+            errorMessage = "Failed to load posts"
+        }
+    }
+    
+    func loadUsers() async {
+        do {
+            allUsers = try await SupabaseService.shared.fetchAllUsers()
+        } catch {
+            errorMessage = "Failed to load users"
+        }
+    }
+    
+    func deletePost(_ post: Post) async {
+        do {
+            try await SupabaseService.shared.deletePost(postId: post.id)
+            await loadPosts()
+        } catch {
+            errorMessage = "Failed to delete post"
+        }
+    }
+    
+    func banUser(_ user: User) async {
+        do {
+            try await SupabaseService.shared.banUser(userId: user.id)
+            await loadUsers()
+        } catch {
+            errorMessage = "Failed to ban user"
         }
     }
 }

@@ -11,7 +11,7 @@ struct AppNotification: Identifiable, Codable, Equatable {
     let type: NotificationType
     let title: String
     let body: String
-    let isRead: Bool
+    var isRead: Bool  // Changed from let to var
     let createdAt: Date
     
     enum CodingKeys: String, CodingKey {

@@ -2,16 +2,12 @@
 //  RequestMarketViewModel.swift
 //  TYLER'S TERMINAL
 //
-//  Request Market state management
-//
 
 import SwiftUI
 import Combine
 
 @MainActor
 class RequestMarketViewModel: ObservableObject {
-    
-    // MARK: - Published Properties
     @Published var searchQuery: String = ""
     @Published var searchResults: [(ticker: String, category: AssetRequest.AssetCategory)] = []
     @Published var selectedCategory: AssetRequest.AssetCategory = .stock
@@ -22,13 +18,11 @@ class RequestMarketViewModel: ObservableObject {
     @Published var successMessage: String?
     @Published var showCustomRequest = false
     
-    private var searchTask: Task<Void, Never>?
-    
-    // MARK: - User Requests
     @Published var userRequests: [AssetRequest] = []
     @Published var isLoadingRequests = false
     
-    // MARK: - Computed Properties
+    private var searchTask: Task<Void, Never>?
+    
     var hasSearchResults: Bool {
         return !searchResults.isEmpty
     }
@@ -44,7 +38,6 @@ class RequestMarketViewModel: ObservableObject {
         return searchQuery.uppercased()
     }
     
-    // MARK: - Search
     func performSearch() {
         guard !searchQuery.isEmpty else {
             searchResults = []
@@ -53,9 +46,8 @@ class RequestMarketViewModel: ObservableObject {
         
         isSearching = true
         
-        // Search in preloaded database
         let results = AssetDatabase.search(query: searchQuery)
-        searchResults = Array(results.prefix(10)) // Limit to 10 results
+        searchResults = Array(results.prefix(10))
         
         isSearching = false
     }
@@ -73,7 +65,6 @@ class RequestMarketViewModel: ObservableObject {
         searchResults = []
     }
     
-    // MARK: - Submit Request
     func submitRequest() async {
         guard canSubmitRequest else {
             errorMessage = "INVALID REQUEST"
@@ -98,7 +89,6 @@ class RequestMarketViewModel: ObservableObject {
             successMessage = "REQUEST SUBMITTED: \(ticker)"
             clearSearch()
             
-            // Refresh user requests
             await fetchUserRequests()
             
         } catch let error as SupabaseError {
@@ -110,7 +100,6 @@ class RequestMarketViewModel: ObservableObject {
         isSubmitting = false
     }
     
-    // MARK: - Fetch User Requests
     func fetchUserRequests() async {
         isLoadingRequests = true
         
@@ -124,34 +113,27 @@ class RequestMarketViewModel: ObservableObject {
         isLoadingRequests = false
     }
     
-    // MARK: - Category Selection
     func selectCategory(_ category: AssetRequest.AssetCategory) {
         selectedCategory = category
-        // Filter search results by category
         if !searchQuery.isEmpty {
             performSearch()
         }
     }
     
-    // MARK: - Helper Methods
     func getCategoryColor(for ticker: String) -> String {
-        return AssetDatabase.category(for: ticker).color
+        return AssetDatabase.category(for: ticker)?.color ?? "#888888"
     }
     
     func clearMessages() {
         errorMessage = nil
         successMessage = nil
     }
-}
-
-// MARK: - Debounced Search
-extension RequestMarketViewModel {
+    
     func debouncedSearch() {
-        // Cancel previous search task
         searchTask?.cancel()
         
         searchTask = Task {
-            try? await Task.sleep(nanoseconds: 300_000_000) // 300ms debounce
+            try? await Task.sleep(nanoseconds: 300_000_000)
             
             guard !Task.isCancelled else { return }
             
@@ -160,6 +142,4 @@ extension RequestMarketViewModel {
             }
         }
     }
-    
-
 }

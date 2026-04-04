@@ -2,8 +2,6 @@
 //  ActivityViewModel.swift
 //  TYLER'S TERMINAL
 //
-//  Activity/Notifications state management
-//
 
 import SwiftUI
 import Combine
@@ -11,13 +9,11 @@ import Combine
 @MainActor
 class ActivityViewModel: ObservableObject {
     
-    // MARK: - Published Properties
     @Published var notifications: [AppNotification] = []
     @Published var isLoading = false
     @Published var errorMessage: String?
     @Published var selectedFilter: NotificationFilter = .all
     
-    // MARK: - Filter Options
     enum NotificationFilter: String, CaseIterable {
         case all = "ALL"
         case unread = "UNREAD"
@@ -29,7 +25,6 @@ class ActivityViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Computed Properties
     var unreadCount: Int {
         return notifications.filter { !$0.isRead }.count
     }
@@ -41,12 +36,12 @@ class ActivityViewModel: ObservableObject {
         case .unread:
             return notifications.filter { !$0.isRead }
         case .trades:
-            return notifications.filter { 
-                $0.type == .newTrade || $0.type == .requestFulfilled 
+            return notifications.filter {
+                $0.type == .newPost || $0.type == .system
             }
         case .comments:
-            return notifications.filter { 
-                $0.type == .commentOnPost || $0.type == .reactionReceived 
+            return notifications.filter {
+                $0.type == .newComment || $0.type == .reaction
             }
         }
     }
@@ -55,29 +50,8 @@ class ActivityViewModel: ObservableObject {
         return unreadCount > 0
     }
     
-    // MARK: - Initialization
-    init() {
-        setupNotifications()
-    }
+    init() {}
     
-    // MARK: - Notification Setup
-    private func setupNotifications() {
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleNewNotification),
-            name: Notification.Name("NewTradeNotification"),
-            object: nil
-        )
-    }
-    
-    @objc private func handleNewNotification(_ notification: Notification) {
-        // Add new notification to list
-        Task {
-            await fetchNotifications()
-        }
-    }
-    
-    // MARK: - Fetch Notifications
     func fetchNotifications() async {
         guard !isLoading else { return }
         
@@ -87,8 +61,6 @@ class ActivityViewModel: ObservableObject {
         do {
             let newNotifications = try await SupabaseService.shared.fetchNotifications()
             notifications = newNotifications
-        } catch let error as SupabaseError {
-            errorMessage = error.localizedDescription
         } catch {
             errorMessage = "CONNECTION LOST"
         }
@@ -96,12 +68,10 @@ class ActivityViewModel: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - Mark as Read
-    func markAsRead(notificationId: UUID) async {
+    func markAsRead(notificationId: String) async {
         do {
             try await SupabaseService.shared.markNotificationAsRead(notificationId: notificationId)
             
-            // Update local state
             if let index = notifications.firstIndex(where: { $0.id == notificationId }) {
                 notifications[index].isRead = true
             }
@@ -118,22 +88,12 @@ class ActivityViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Delete Notification
-    func deleteNotification(notificationId: UUID) {
-        // Remove from local array
+    func deleteNotification(notificationId: String) {
         notifications.removeAll { $0.id == notificationId }
-        
-        // TODO: Implement delete in Supabase
     }
     
-    // MARK: - Filter
     func setFilter(_ filter: NotificationFilter) {
         selectedFilter = filter
-    }
-    
-    // MARK: - Helper Methods
-    func notifications(of type: AppNotification.NotificationType) -> [AppNotification] {
-        return notifications.filter { $0.type == type }
     }
     
     func clearError() {
