@@ -1,0 +1,570 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		D10A855F2F80A5C9009406A2 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10A855E2F80A5C6009406A2 /* Comment.swift */; };
+		D10A85612F80A72D009406A2 /* AssetDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10A85602F80A720009406A2 /* AssetDatabase.swift */; };
+		D14967802F7F7CE500E21A55 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = D149677F2F7F7CE500E21A55 /* FirebaseCore */; };
+		D14967822F7F7CEF00E21A55 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = D14967812F7F7CEF00E21A55 /* FirebaseMessaging */; };
+		D163A6162F7F75DB00A9EFDF /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D163A6152F7F75DB00A9EFDF /* Auth */; };
+		D163A6182F7F75DB00A9EFDF /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D163A6172F7F75DB00A9EFDF /* Functions */; };
+		D163A61A2F7F75DB00A9EFDF /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D163A6192F7F75DB00A9EFDF /* PostgREST */; };
+		D163A61C2F7F75DB00A9EFDF /* Realtime in Frameworks */ = {isa = PBXBuildFile; productRef = D163A61B2F7F75DB00A9EFDF /* Realtime */; };
+		D163A61E2F7F75DB00A9EFDF /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D163A61D2F7F75DB00A9EFDF /* Storage */; };
+		D167C4C52F7F553D00BF7248 /* TerminalColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B72F7F553D00BF7248 /* TerminalColors.swift */; };
+		D167C4C62F7F553D00BF7248 /* TylersTerminalApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B52F7F553D00BF7248 /* TylersTerminalApp.swift */; };
+		D167C4C82F7F553D00BF7248 /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B22F7F553D00BF7248 /* AppDelegate.swift */; };
+		D167C4C92F7F553D00BF7248 /* Notification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4AE2F7F553D00BF7248 /* Notification.swift */; };
+		D167C4CA2F7F553D00BF7248 /* ProfileViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BC2F7F553D00BF7248 /* ProfileViewModel.swift */; };
+		D167C4CB2F7F553D00BF7248 /* SupabaseService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B32F7F553D00BF7248 /* SupabaseService.swift */; };
+		D167C4CC2F7F553D00BF7248 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B62F7F553D00BF7248 /* Extensions.swift */; };
+		D167C4CE2F7F553D00BF7248 /* AssetRequest.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4AD2F7F553D00BF7248 /* AssetRequest.swift */; };
+		D167C4CF2F7F553D00BF7248 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B02F7F553D00BF7248 /* User.swift */; };
+		D167C4D02F7F553D00BF7248 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BA2F7F553D00BF7248 /* AuthViewModel.swift */; };
+		D167C4D32F7F553D00BF7248 /* ActivityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B92F7F553D00BF7248 /* ActivityViewModel.swift */; };
+		D167C4D42F7F553D00BF7248 /* Post.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4AF2F7F553D00BF7248 /* Post.swift */; };
+		D167C4D52F7F553D00BF7248 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BB2F7F553D00BF7248 /* FeedViewModel.swift */; };
+		D167C4D72F7F553D00BF7248 /* RequestMarketViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BD2F7F553D00BF7248 /* RequestMarketViewModel.swift */; };
+		D167C4D92F7F553D00BF7248 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D167C4AB2F7F553D00BF7248 /* GoogleService-Info.plist */; };
+		D18E02BB2F7F93BF00423073 /* ActivityView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B32F7F93BF00423073 /* ActivityView.swift */; };
+		D18E02BC2F7F93BF00423073 /* AdminPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B42F7F93BF00423073 /* AdminPanelView.swift */; };
+		D18E02BD2F7F93BF00423073 /* FeedView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B52F7F93BF00423073 /* FeedView.swift */; };
+		D18E02BE2F7F93BF00423073 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B62F7F93BF00423073 /* LoginView.swift */; };
+		D18E02BF2F7F93BF00423073 /* NewPostView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B72F7F93BF00423073 /* NewPostView.swift */; };
+		D18E02C02F7F93BF00423073 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B82F7F93BF00423073 /* ProfileView.swift */; };
+		D18E02C12F7F93BF00423073 /* RequestMarketView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D18E02B92F7F93BF00423073 /* RequestMarketView.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		D10A855E2F80A5C6009406A2 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
+		D10A85602F80A720009406A2 /* AssetDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetDatabase.swift; sourceTree = "<group>"; };
+		D167C49C2F7F550A00BF7248 /* tylers-terminal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "tylers-terminal.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D167C4AB2F7F553D00BF7248 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		D167C4AD2F7F553D00BF7248 /* AssetRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetRequest.swift; sourceTree = "<group>"; };
+		D167C4AE2F7F553D00BF7248 /* Notification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
+		D167C4AF2F7F553D00BF7248 /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
+		D167C4B02F7F553D00BF7248 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
+		D167C4B22F7F553D00BF7248 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		D167C4B32F7F553D00BF7248 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
+		D167C4B52F7F553D00BF7248 /* TylersTerminalApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TylersTerminalApp.swift; sourceTree = "<group>"; };
+		D167C4B62F7F553D00BF7248 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
+		D167C4B72F7F553D00BF7248 /* TerminalColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TerminalColors.swift; sourceTree = "<group>"; };
+		D167C4B92F7F553D00BF7248 /* ActivityViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityViewModel.swift; sourceTree = "<group>"; };
+		D167C4BA2F7F553D00BF7248 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		D167C4BB2F7F553D00BF7248 /* FeedViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedViewModel.swift; sourceTree = "<group>"; };
+		D167C4BC2F7F553D00BF7248 /* ProfileViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileViewModel.swift; sourceTree = "<group>"; };
+		D167C4BD2F7F553D00BF7248 /* RequestMarketViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestMarketViewModel.swift; sourceTree = "<group>"; };
+		D18E02B32F7F93BF00423073 /* ActivityView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivityView.swift; sourceTree = "<group>"; };
+		D18E02B42F7F93BF00423073 /* AdminPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminPanelView.swift; sourceTree = "<group>"; };
+		D18E02B52F7F93BF00423073 /* FeedView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FeedView.swift; sourceTree = "<group>"; };
+		D18E02B62F7F93BF00423073 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		D18E02B72F7F93BF00423073 /* NewPostView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewPostView.swift; sourceTree = "<group>"; };
+		D18E02B82F7F93BF00423073 /* ProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProfileView.swift; sourceTree = "<group>"; };
+		D18E02B92F7F93BF00423073 /* RequestMarketView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RequestMarketView.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D167C49E2F7F550A00BF7248 /* tylers-terminal */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "tylers-terminal";
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		D167C4992F7F550A00BF7248 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D163A61A2F7F75DB00A9EFDF /* PostgREST in Frameworks */,
+				D163A6182F7F75DB00A9EFDF /* Functions in Frameworks */,
+				D14967822F7F7CEF00E21A55 /* FirebaseMessaging in Frameworks */,
+				D163A6162F7F75DB00A9EFDF /* Auth in Frameworks */,
+				D163A61E2F7F75DB00A9EFDF /* Storage in Frameworks */,
+				D14967802F7F7CE500E21A55 /* FirebaseCore in Frameworks */,
+				D163A61C2F7F75DB00A9EFDF /* Realtime in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		D149677E2F7F7CE500E21A55 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D167C4932F7F550A00BF7248 = {
+			isa = PBXGroup;
+			children = (
+				D167C49D2F7F550A00BF7248 /* Products */,
+				D167C49E2F7F550A00BF7248 /* tylers-terminal */,
+				D167C4AB2F7F553D00BF7248 /* GoogleService-Info.plist */,
+				D167C4B12F7F553D00BF7248 /* Models */,
+				D167C4B42F7F553D00BF7248 /* Services */,
+				D167C4B52F7F553D00BF7248 /* TylersTerminalApp.swift */,
+				D167C4B82F7F553D00BF7248 /* Utils */,
+				D167C4BE2F7F553D00BF7248 /* ViewModels */,
+				D18E02BA2F7F93BF00423073 /* Views */,
+				D149677E2F7F7CE500E21A55 /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		D167C49D2F7F550A00BF7248 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				D167C49C2F7F550A00BF7248 /* tylers-terminal.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		D167C4B12F7F553D00BF7248 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				D10A855E2F80A5C6009406A2 /* Comment.swift */,
+				D167C4AD2F7F553D00BF7248 /* AssetRequest.swift */,
+				D167C4AE2F7F553D00BF7248 /* Notification.swift */,
+				D167C4AF2F7F553D00BF7248 /* Post.swift */,
+				D167C4B02F7F553D00BF7248 /* User.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		D167C4B42F7F553D00BF7248 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				D167C4B22F7F553D00BF7248 /* AppDelegate.swift */,
+				D167C4B32F7F553D00BF7248 /* SupabaseService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		D167C4B82F7F553D00BF7248 /* Utils */ = {
+			isa = PBXGroup;
+			children = (
+				D10A85602F80A720009406A2 /* AssetDatabase.swift */,
+				D167C4B62F7F553D00BF7248 /* Extensions.swift */,
+				D167C4B72F7F553D00BF7248 /* TerminalColors.swift */,
+			);
+			path = Utils;
+			sourceTree = "<group>";
+		};
+		D167C4BE2F7F553D00BF7248 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				D167C4B92F7F553D00BF7248 /* ActivityViewModel.swift */,
+				D167C4BA2F7F553D00BF7248 /* AuthViewModel.swift */,
+				D167C4BB2F7F553D00BF7248 /* FeedViewModel.swift */,
+				D167C4BC2F7F553D00BF7248 /* ProfileViewModel.swift */,
+				D167C4BD2F7F553D00BF7248 /* RequestMarketViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		D18E02BA2F7F93BF00423073 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				D18E02B32F7F93BF00423073 /* ActivityView.swift */,
+				D18E02B42F7F93BF00423073 /* AdminPanelView.swift */,
+				D18E02B52F7F93BF00423073 /* FeedView.swift */,
+				D18E02B62F7F93BF00423073 /* LoginView.swift */,
+				D18E02B72F7F93BF00423073 /* NewPostView.swift */,
+				D18E02B82F7F93BF00423073 /* ProfileView.swift */,
+				D18E02B92F7F93BF00423073 /* RequestMarketView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		D167C49B2F7F550A00BF7248 /* tylers-terminal */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D167C4A72F7F550C00BF7248 /* Build configuration list for PBXNativeTarget "tylers-terminal" */;
+			buildPhases = (
+				D167C4982F7F550A00BF7248 /* Sources */,
+				D167C4992F7F550A00BF7248 /* Frameworks */,
+				D167C49A2F7F550A00BF7248 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			fileSystemSynchronizedGroups = (
+				D167C49E2F7F550A00BF7248 /* tylers-terminal */,
+			);
+			name = "tylers-terminal";
+			packageProductDependencies = (
+				D163A6152F7F75DB00A9EFDF /* Auth */,
+				D163A6172F7F75DB00A9EFDF /* Functions */,
+				D163A6192F7F75DB00A9EFDF /* PostgREST */,
+				D163A61B2F7F75DB00A9EFDF /* Realtime */,
+				D163A61D2F7F75DB00A9EFDF /* Storage */,
+				D149677F2F7F7CE500E21A55 /* FirebaseCore */,
+				D14967812F7F7CEF00E21A55 /* FirebaseMessaging */,
+			);
+			productName = "tylers-terminal";
+			productReference = D167C49C2F7F550A00BF7248 /* tylers-terminal.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D167C4942F7F550A00BF7248 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2630;
+				LastUpgradeCheck = 2630;
+				TargetAttributes = {
+					D167C49B2F7F550A00BF7248 = {
+						CreatedOnToolsVersion = 26.3;
+					};
+				};
+			};
+			buildConfigurationList = D167C4972F7F550A00BF7248 /* Build configuration list for PBXProject "tylers-terminal" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = D167C4932F7F550A00BF7248;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				D163A6132F7F755700A9EFDF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+				D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = D167C49D2F7F550A00BF7248 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D167C49B2F7F550A00BF7248 /* tylers-terminal */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		D167C49A2F7F550A00BF7248 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D167C4D92F7F553D00BF7248 /* GoogleService-Info.plist in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		D167C4982F7F550A00BF7248 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				D167C4C52F7F553D00BF7248 /* TerminalColors.swift in Sources */,
+				D167C4C62F7F553D00BF7248 /* TylersTerminalApp.swift in Sources */,
+				D167C4C82F7F553D00BF7248 /* AppDelegate.swift in Sources */,
+				D167C4C92F7F553D00BF7248 /* Notification.swift in Sources */,
+				D167C4CA2F7F553D00BF7248 /* ProfileViewModel.swift in Sources */,
+				D167C4CB2F7F553D00BF7248 /* SupabaseService.swift in Sources */,
+				D167C4CC2F7F553D00BF7248 /* Extensions.swift in Sources */,
+				D167C4CE2F7F553D00BF7248 /* AssetRequest.swift in Sources */,
+				D167C4CF2F7F553D00BF7248 /* User.swift in Sources */,
+				D10A855F2F80A5C9009406A2 /* Comment.swift in Sources */,
+				D167C4D02F7F553D00BF7248 /* AuthViewModel.swift in Sources */,
+				D18E02BB2F7F93BF00423073 /* ActivityView.swift in Sources */,
+				D18E02BC2F7F93BF00423073 /* AdminPanelView.swift in Sources */,
+				D18E02BD2F7F93BF00423073 /* FeedView.swift in Sources */,
+				D18E02BE2F7F93BF00423073 /* LoginView.swift in Sources */,
+				D18E02BF2F7F93BF00423073 /* NewPostView.swift in Sources */,
+				D18E02C02F7F93BF00423073 /* ProfileView.swift in Sources */,
+				D10A85612F80A72D009406A2 /* AssetDatabase.swift in Sources */,
+				D18E02C12F7F93BF00423073 /* RequestMarketView.swift in Sources */,
+				D167C4D32F7F553D00BF7248 /* ActivityViewModel.swift in Sources */,
+				D167C4D42F7F553D00BF7248 /* Post.swift in Sources */,
+				D167C4D52F7F553D00BF7248 /* FeedViewModel.swift in Sources */,
+				D167C4D72F7F553D00BF7248 /* RequestMarketViewModel.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D167C4A52F7F550C00BF7248 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = FVTXV9HA3B;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		D167C4A62F7F550C00BF7248 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = FVTXV9HA3B;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.2;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D167C4A82F7F550C00BF7248 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FVTXV9HA3B;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tradewithtyler.tylersterminal;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D167C4A92F7F550C00BF7248 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = FVTXV9HA3B;
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "";
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1;
+				PRODUCT_BUNDLE_IDENTIFIER = com.tradewithtyler.tylersterminal;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		D167C4972F7F550A00BF7248 /* Build configuration list for PBXProject "tylers-terminal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D167C4A52F7F550C00BF7248 /* Debug */,
+				D167C4A62F7F550C00BF7248 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		D167C4A72F7F550C00BF7248 /* Build configuration list for PBXNativeTarget "tylers-terminal" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D167C4A82F7F550C00BF7248 /* Debug */,
+				D167C4A92F7F550C00BF7248 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		D163A6132F7F755700A9EFDF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.11.0;
+			};
+		};
+		D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.5.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		D149677F2F7F7CE500E21A55 /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6132F7F755700A9EFDF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		D14967812F7F7CEF00E21A55 /* FirebaseMessaging */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6132F7F755700A9EFDF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseMessaging;
+		};
+		D163A6152F7F75DB00A9EFDF /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		D163A6172F7F75DB00A9EFDF /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
+		};
+		D163A6192F7F75DB00A9EFDF /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		D163A61B2F7F75DB00A9EFDF /* Realtime */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Realtime;
+		};
+		D163A61D2F7F75DB00A9EFDF /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = D163A6142F7F75DB00A9EFDF /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = D167C4942F7F550A00BF7248 /* Project object */;
+}
