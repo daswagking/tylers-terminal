@@ -7,8 +7,8 @@ import Foundation
 import Combine
 
 struct SupabaseConfig {
-    static let projectURL = "https://YOUR_PROJECT_ID.supabase.co"
-    static let anonKey = "YOUR_ANON_KEY"
+    static let projectURL = "https://mlfuoqeabrsxfzvdvlkw.supabase.co"
+    static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZnVvcWVhYnJzeGZ6dmR2bGt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjkxNDEsImV4cCI6MjA5MDc0NTE0MX0.Ga64BiamlcsrjSzdulq-7VxPLR3q8glDGospqi5c9po"
 }
 
 enum SupabaseError: Error, LocalizedError {
@@ -136,6 +136,7 @@ class SupabaseService {
             throw SupabaseError.authenticationFailed
         }
     }
+    
     
     func signOut() async throws {
         sessionToken = nil

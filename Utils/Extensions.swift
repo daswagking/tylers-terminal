@@ -30,3 +30,12 @@ extension View {
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
     }
 }
+
+extension String {
+    func truncated(to length: Int, trailing: String = "...") -> String {
+        if count > length {
+            return String(prefix(length)) + trailing
+        }
+        return self
+    }
+}
