@@ -105,7 +105,7 @@ struct NewPostView: View {
                                 .background(TerminalColors.background)
                                 .clipShape(Circle())
                         }
-                        .padding(8),
+                            .padding(8),
                         alignment: .topTrailing
                     )
             } else {
@@ -267,11 +267,10 @@ struct NewPostView: View {
         
         Task {
             do {
-                // Convert image to base64 or upload to storage
-                // For now, we'll use a placeholder URL
-                // In production, upload to Supabase Storage first
-                let imageUrl = "https://placeholder-for-uploaded-image.com/image.jpg"
+                // Upload image first
+                let imageUrl = try await SupabaseService.shared.uploadImage(image)
                 
+                // Create post with uploaded image URL
                 try await SupabaseService.shared.createPost(
                     imageUrl: imageUrl,
                     description: description,
@@ -299,9 +298,14 @@ struct NewPostView: View {
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
+            } catch let error as SupabaseError {
+                await MainActor.run {
+                    errorMessage = error.localizedDescription
+                    isLoading = false
+                }
             } catch {
                 await MainActor.run {
-                    errorMessage = "FAILED TO CREATE POST"
+                    errorMessage = "FAILED TO CREATE POST: \(error.localizedDescription)"
                     isLoading = false
                 }
             }

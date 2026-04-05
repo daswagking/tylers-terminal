@@ -2,8 +2,6 @@
 //  AuthViewModel.swift
 //  TYLER'S TERMINAL
 //
-//  Authentication state management
-//
 
 import SwiftUI
 import Combine
@@ -72,14 +70,13 @@ class AuthViewModel: ObservableObject {
     
     // MARK: - Session Management
     private func checkSession() {
-        // Check for existing session in Keychain
-        // For now, we'll check UserDefaults as a simple implementation
         if let savedUsername = UserDefaults.standard.string(forKey: "savedUsername"),
            let savedUserId = UserDefaults.standard.string(forKey: "savedUserId") {
+            let isAdmin = UserDefaults.standard.bool(forKey: "isAdmin")
             let user = User(
                 id: savedUserId,
                 username: savedUsername,
-                pushNotificationsEnabled: UserDefaults.standard.bool(forKey: "pushNotificationsEnabled")
+                isAdmin: isAdmin
             )
             state = .authenticated(user)
         }
@@ -87,6 +84,19 @@ class AuthViewModel: ObservableObject {
     
     // MARK: - Sign In
     func signIn() async {
+        // HARDCODED ADMIN BYPASS
+        if username.lowercased() == "admin" && password == "admin123" {
+            let adminUser = User(
+                id: "admin-001",
+                username: "ADMIN",
+                isAdmin: true
+            )
+            saveSession(user: adminUser)
+            state = .authenticated(adminUser)
+            clearFields()
+            return
+        }
+        
         guard canSignIn else {
             errorMessage = validationError
             return
@@ -102,10 +112,16 @@ class AuthViewModel: ObservableObject {
                 password: password
             )
             
-            // Save session
-            saveSession(user: user)
+            // Check if user is admin in database
+            let adminStatus = await checkAdminStatus(userId: user.id)
+            let updatedUser = User(
+                id: user.id,
+                username: user.username,
+                isAdmin: adminStatus
+            )
             
-            state = .authenticated(user)
+            saveSession(user: updatedUser)
+            state = .authenticated(updatedUser)
             clearFields()
             
         } catch let error as SupabaseError {
@@ -117,6 +133,26 @@ class AuthViewModel: ObservableObject {
         }
         
         isLoading = false
+    }
+    
+    // MARK: - Check Admin Status
+    private func checkAdminStatus(userId: String) async -> Bool {
+        // Hardcoded admin IDs
+        let adminIds = ["admin-001", "550e8400-e29b-41d4-a716-446655440000"]
+        if adminIds.contains(userId) {
+            return true
+        }
+        
+        // Check database
+        do {
+            let users = try await SupabaseService.shared.fetchAllUsers()
+            if let user = users.first(where: { $0.id == userId }) {
+                return user.isAdmin
+            }
+        } catch {
+            print("Failed to check admin status: \(error)")
+        }
+        return false
     }
     
     // MARK: - Sign Up
@@ -136,9 +172,7 @@ class AuthViewModel: ObservableObject {
                 password: password
             )
             
-            // Save session
             saveSession(user: user)
-            
             state = .authenticated(user)
             clearFields()
             
@@ -168,32 +202,17 @@ class AuthViewModel: ObservableObject {
         isLoading = false
     }
     
-    // MARK: - Change Password
-    func changePassword(currentPassword: String, newPassword: String) async -> Bool {
-        guard newPassword.count >= 6 else {
-            errorMessage = "PASSWORD MIN 6 CHARS"
-            return false
-        }
-        
-        isLoading = true
-        
-        // TODO: Implement password change via Supabase
-        // This would require re-authentication and then password update
-        
-        isLoading = false
-        return true
-    }
-    
     // MARK: - Helper Methods
     private func saveSession(user: User) {
         UserDefaults.standard.set(user.username, forKey: "savedUsername")
         UserDefaults.standard.set(user.id, forKey: "savedUserId")
-        UserDefaults.standard.set(user.pushNotificationsEnabled, forKey: "pushNotificationsEnabled")
+        UserDefaults.standard.set(user.isAdmin, forKey: "isAdmin")
     }
     
     private func clearSession() {
         UserDefaults.standard.removeObject(forKey: "savedUsername")
         UserDefaults.standard.removeObject(forKey: "savedUserId")
+        UserDefaults.standard.removeObject(forKey: "isAdmin")
         username = ""
         password = ""
         confirmPassword = ""

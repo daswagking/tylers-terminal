@@ -4,6 +4,7 @@
 //
 
 import Foundation
+import UIKit
 import Combine
 
 struct SupabaseConfig {
@@ -97,7 +98,14 @@ class SupabaseService {
         if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
-            return User(id: authResponse.user.id, username: username)
+            // Fetch full user profile including admin status
+            do {
+                let profile = try await fetchUserProfile(userId: authResponse.user.id)
+                return profile
+            } catch {
+                // If profile not found, return basic user
+                return User(id: authResponse.user.id, username: username)
+            }
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "Signup failed")
         }
@@ -141,7 +149,67 @@ class SupabaseService {
     func signOut() async throws {
         sessionToken = nil
     }
-    
+    // MARK: - Image Upload
+    func uploadImage(_ image: UIImage) async throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        let fileName = "\(UUID().uuidString).jpg"
+        let endpoint = "\(baseURL)/storage/v1/object/trade-images/\(fileName)"
+        
+        guard let url = URL(string: endpoint) else {
+            throw SupabaseError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = headers(authenticated: true)
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.httpBody = imageData
+        
+        let (_, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+            // Return the public URL
+            return "\(baseURL)/storage/v1/object/public/trade-images/\(fileName)"
+        } else {
+            throw SupabaseError.serverError(httpResponse.statusCode, "Upload failed")
+        }
+    }
+    // MARK: - User Profile
+    func fetchUserProfile(userId: String) async throws -> User {
+        let endpoint = "\(baseURL)/rest/v1/users?id=eq.\(userId)&select=*"
+        
+        guard let url = URL(string: endpoint) else {
+            throw SupabaseError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "GET"
+        request.allHTTPHeaderFields = headers(authenticated: true)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if httpResponse.statusCode == 200 {
+            let users = try JSONDecoder().decode([User].self, from: data)
+            if let user = users.first {
+                return user
+            } else {
+                throw SupabaseError.serverError(404, "User not found")
+            }
+        } else {
+            throw SupabaseError.serverError(httpResponse.statusCode, "")
+        }
+    }
     // MARK: - Posts
     func fetchPosts(limit: Int = 20, offset: Int = 0) async throws -> [Post] {
         let endpoint = "\(baseURL)/rest/v1/posts?select=*&order=created_at.desc&limit=\(limit)&offset=\(offset)"
