@@ -514,7 +514,7 @@ struct CommentsView: View {
     private func loadComments() {
         Task {
             isLoading = true
-            comments = await feedViewModel.fetchComments(postId: post.id)
+            comments = await feedViewModel.fetchComments(for: post.id)
             isLoading = false
         }
     }
