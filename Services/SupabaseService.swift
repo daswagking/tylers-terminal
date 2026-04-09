@@ -188,7 +188,9 @@ class SupabaseService {
             print("📥 FETCH POSTS RESPONSE: \(jsonString.prefix(500))...")
             
             do {
-                let posts = try JSONDecoder().decode([Post].self, from: data)
+                let decoder = JSONDecoder()
+                decoder.dateDecodingStrategy = .iso8601
+                let posts = try decoder.decode([Post].self, from: data)
                 print("✅ FETCHED \(posts.count) POSTS")
                 return posts
             } catch {
