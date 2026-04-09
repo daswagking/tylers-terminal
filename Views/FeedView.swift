@@ -78,7 +78,7 @@ struct FeedView: View {
                 Button("CANCEL", role: .cancel) {}
                 Button("DELETE", role: .destructive) {
                     if let post = postToDelete {
-                        deletePost(post)
+                        self.deletePost(post)
                     }
                 }
             } message: {
