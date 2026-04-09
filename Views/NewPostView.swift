@@ -311,6 +311,10 @@ struct NewPostView: View {
                     }
                 }
             } catch {
+                // Print full error details to console
+                print("❌ POST ERROR: \(error)")
+                print("❌ POST ERROR LOCALIZED: \(error.localizedDescription)")
+                
                 await MainActor.run {
                     errorMessage = "FAILED TO CREATE POST: \(error.localizedDescription)"
                     isLoading = false

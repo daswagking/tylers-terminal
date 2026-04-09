@@ -63,6 +63,9 @@ class SupabaseService {
         
         if authenticated, let token = sessionToken {
             headers["Authorization"] = "Bearer \(token)"
+            print("🔑 Using auth token: \(token.prefix(20))...")
+        } else if authenticated {
+            print("⚠️ No auth token available!")
         }
         
         return headers
@@ -196,14 +199,16 @@ class SupabaseService {
         request.allHTTPHeaderFields = headers(authenticated: true)
         request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (_, response) = try await URLSession.shared.data(for: request)
+        let (data, response) = try await URLSession.shared.data(for: request)
         
         guard let httpResponse = response as? HTTPURLResponse else {
             throw SupabaseError.invalidResponse
         }
         
         if httpResponse.statusCode != 201 {
-            throw SupabaseError.serverError(httpResponse.statusCode, "")
+            let errorBody = String(data: data, encoding: .utf8) ?? "No error details"
+            print("❌ CREATE POST ERROR - Status: \(httpResponse.statusCode), Body: \(errorBody)")
+            throw SupabaseError.serverError(httpResponse.statusCode, errorBody)
         }
     }
     
