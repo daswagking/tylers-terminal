@@ -78,7 +78,7 @@ struct FeedView: View {
                 Button("CANCEL", role: .cancel) {}
                 Button("DELETE", role: .destructive) {
                     if let post = postToDelete {
-                        self.deletePost(post)
+                        deletePost(post)
                     }
                 }
             } message: {
@@ -514,7 +514,7 @@ struct CommentsView: View {
     private func loadComments() {
         Task {
             isLoading = true
-            comments = await feedViewModel.fetchComments(for: post.id)
+            comments = await feedViewModel.fetchComments(postId: post.id)
             isLoading = false
         }
     }
