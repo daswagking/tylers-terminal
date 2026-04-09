@@ -16,6 +16,8 @@ struct FeedView: View {
     @State private var showAdminPanel = false
     @State private var postToDelete: Post?
     @State private var showDeleteConfirmation = false
+    @State private var showPostDetail = false
+    @State private var detailPost: Post?
     
     var body: some View {
         NavigationView {
@@ -73,6 +75,11 @@ struct FeedView: View {
             }
             .sheet(isPresented: $showAdminPanel) {
                 AdminPanelView()
+            }
+            .sheet(isPresented: $showPostDetail) {
+                if let post = detailPost {
+                    PostDetailView(post: post)
+                }
             }
             .alert("DELETE POST?", isPresented: $showDeleteConfirmation) {
                 Button("CANCEL", role: .cancel) {}
@@ -165,6 +172,10 @@ struct FeedView: View {
                 ForEach(feedViewModel.posts) { post in
                     PostCardView(
                         post: post,
+                        onTap: {
+                            detailPost = post
+                            showPostDetail = true
+                        },
                         onReaction: { type in
                             Task {
                                 await feedViewModel.toggleReaction(postId: post.id, type: type)
@@ -219,21 +230,28 @@ struct FeedView: View {
 // MARK: - Post Card View
 struct PostCardView: View {
     let post: Post
+    let onTap: () -> Void
     let onReaction: (ReactionType) -> Void
     let onComment: () -> Void
     let onDelete: (() -> Void)?
     
     @EnvironmentObject var authViewModel: AuthViewModel
+    @State private var isExpanded = false
+    
+    private let maxLines = 3
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             // Header
             postHeader
             
-            // Image
+            // Image (tappable)
             postImage
+                .onTapGesture {
+                    onTap()
+                }
             
-            // Description
+            // Description (with "See more...")
             if !post.description.isEmpty {
                 postDescription
             }
@@ -314,7 +332,7 @@ struct PostCardView: View {
                             .padding(.top, 8)
                     }
                 }
-                .frame(height: 250)
+                .frame(height: 200)
                 
             case .success(let image):
                 image
@@ -335,7 +353,7 @@ struct PostCardView: View {
                             .padding(.top, 8)
                     }
                 }
-                .frame(height: 250)
+                .frame(height: 200)
                 
             @unknown default:
                 EmptyView()
@@ -343,13 +361,38 @@ struct PostCardView: View {
         }
     }
     
-    // MARK: - Post Description
+    // MARK: - Post Description with "See more..."
     private var postDescription: some View {
-        Text(post.description)
-            .font(TerminalFonts.body)
-            .foregroundColor(TerminalColors.textPrimary)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 12)
+        VStack(alignment: .leading, spacing: 8) {
+            // Show ticker if present
+            if let ticker = post.ticker {
+                Text(ticker.uppercased())
+                    .font(TerminalFonts.tickerSmall)
+                    .foregroundColor(TerminalColors.primary)
+            }
+            
+            // Description with line limit
+            Text(post.description)
+                .font(TerminalFonts.bodySmall)
+                .foregroundColor(TerminalColors.textPrimary)
+                .lineLimit(isExpanded ? nil : maxLines)
+            
+            // "See more..." button if text is long
+            if post.description.count > 100 {
+                Button(action: {
+                    isExpanded.toggle()
+                }) {
+                    Text(isExpanded ? "SHOW LESS" : "SEE MORE...")
+                        .font(TerminalFonts.caption2.weight(.bold))
+                        .foregroundColor(TerminalColors.primary)
+                }
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 10)
+        .onTapGesture {
+            onTap()
+        }
     }
     
     // MARK: - Engagement Bar
@@ -440,7 +483,7 @@ struct CommentsView: View {
                         Section(header: Text("ORIGINAL POST").font(TerminalFonts.caption)) {
                             HStack {
                                 Text(post.description)
-                                    .font(TerminalFonts.body)
+                                    .font(TerminalFonts.bodySmall)
                                     .foregroundColor(TerminalColors.textPrimary)
                             }
                             .listRowBackground(TerminalColors.backgroundSecondary)
@@ -549,7 +592,7 @@ struct CommentRow: View {
             }
             
             Text(comment.content)
-                .font(TerminalFonts.body)
+                .font(TerminalFonts.bodySmall)
                 .foregroundColor(TerminalColors.textPrimary)
         }
         .padding(.vertical, 8)
