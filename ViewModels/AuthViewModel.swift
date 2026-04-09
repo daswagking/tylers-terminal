@@ -91,7 +91,7 @@ class AuthViewModel: ObservableObject {
                 username: "ADMIN",
                 isAdmin: true
             )
-            saveSession(user: adminUser)
+            saveSession(user: adminUser, token: "admin-token")
             state = .authenticated(adminUser)
             clearFields()
             return
@@ -107,7 +107,7 @@ class AuthViewModel: ObservableObject {
         state = .authenticating
         
         do {
-            let user = try await SupabaseService.shared.signIn(
+            let (user, token) = try await SupabaseService.shared.signIn(
                 username: username.trimmingCharacters(in: .whitespaces),
                 password: password
             )
@@ -120,7 +120,7 @@ class AuthViewModel: ObservableObject {
                 isAdmin: adminStatus
             )
             
-            saveSession(user: updatedUser)
+            saveSession(user: updatedUser, token: token)
             state = .authenticated(updatedUser)
             clearFields()
             
@@ -207,6 +207,7 @@ class AuthViewModel: ObservableObject {
         UserDefaults.standard.set(user.username, forKey: "savedUsername")
         UserDefaults.standard.set(user.id, forKey: "savedUserId")
         UserDefaults.standard.set(user.isAdmin, forKey: "isAdmin")
+        UserDefaults.standard.set(token, forKey: "authToken")
     }
     
     private func clearSession() {

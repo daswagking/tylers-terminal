@@ -5,7 +5,6 @@
 
 import Foundation
 import UIKit
-import Combine
 
 struct SupabaseConfig {
     static let projectURL = "https://mlfuoqeabrsxfzvdvlkw.supabase.co"
@@ -98,25 +97,46 @@ class SupabaseService {
         if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
-            // Fetch full user profile including admin status
-            do {
-                let profile = try await fetchUserProfile(userId: authResponse.user.id)
-                return profile
-            } catch {
-                // If profile not found, return basic user
-                return User(id: authResponse.user.id, username: username)
-            }
+            return User(id: authResponse.user.id, username: username)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "Signup failed")
         }
     }
     
-    func signIn(username: String, password: String) async throws -> User {
+    func signIn(username: String, password: String) async throws -> (user: User, token: String) {
         let endpoint = "\(baseURL)/auth/v1/token?grant_type=password"
         
         guard let url = URL(string: endpoint) else {
             throw SupabaseError.invalidURL
         }
+        
+        let email = "\(username.lowercased())@tylersterminal.local"
+        
+        let body: [String: Any] = [
+            "email": email,
+            "password": password
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = headers()
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if httpResponse.statusCode == 200 {
+            let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
+            sessionToken = authResponse.accessToken
+            print("[DEBUG] Sign in successful, token set: \(authResponse.accessToken.prefix(20))...")
+            return (User(id: authResponse.user.id, username: username), authResponse.accessToken)
+        } else {
+            throw SupabaseError.authenticationFailed
+        }
+    }
         
         let email = "\(username.lowercased())@tylersterminal.local"
         
@@ -145,71 +165,10 @@ class SupabaseService {
         }
     }
     
-    
     func signOut() async throws {
         sessionToken = nil
     }
-    // MARK: - Image Upload
-    func uploadImage(_ image: UIImage) async throws -> String {
-        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
-            throw SupabaseError.invalidResponse
-        }
-        
-        let fileName = "\(UUID().uuidString).jpg"
-        let endpoint = "\(baseURL)/storage/v1/object/trade-images/\(fileName)"
-        
-        guard let url = URL(string: endpoint) else {
-            throw SupabaseError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = headers(authenticated: true)
-        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
-        request.httpBody = imageData
-        
-        let (_, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw SupabaseError.invalidResponse
-        }
-        
-        if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
-            // Return the public URL
-            return "\(baseURL)/storage/v1/object/public/trade-images/\(fileName)"
-        } else {
-            throw SupabaseError.serverError(httpResponse.statusCode, "Upload failed")
-        }
-    }
-    // MARK: - User Profile
-    func fetchUserProfile(userId: String) async throws -> User {
-        let endpoint = "\(baseURL)/rest/v1/users?id=eq.\(userId)&select=*"
-        
-        guard let url = URL(string: endpoint) else {
-            throw SupabaseError.invalidURL
-        }
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "GET"
-        request.allHTTPHeaderFields = headers(authenticated: true)
-        
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
-            throw SupabaseError.invalidResponse
-        }
-        
-        if httpResponse.statusCode == 200 {
-            let users = try JSONDecoder().decode([User].self, from: data)
-            if let user = users.first {
-                return user
-            } else {
-                throw SupabaseError.serverError(404, "User not found")
-            }
-        } else {
-            throw SupabaseError.serverError(httpResponse.statusCode, "")
-        }
-    }
+    
     // MARK: - Posts
     func fetchPosts(limit: Int = 20, offset: Int = 0) async throws -> [Post] {
         let endpoint = "\(baseURL)/rest/v1/posts?select=*&order=created_at.desc&limit=\(limit)&offset=\(offset)"
@@ -481,6 +440,64 @@ class SupabaseService {
         }
     }
     
+    // MARK: - Image Upload
+    func uploadImage(_ image: UIImage) async throws -> String {
+        guard let imageData = image.jpegData(compressionQuality: 0.8) else {
+            print("[DEBUG] Failed to convert image to JPEG")
+            throw SupabaseError.invalidResponse
+        }
+        
+        print("[DEBUG] Image size: \(imageData.count) bytes")
+        print("[DEBUG] Base URL: \(baseURL)")
+        
+        let fileName = "\(UUID().uuidString).jpg"
+        
+        // Try with URL-encoded space
+        let bucketName = "TRADE%20IMAGES"
+        let endpoint = "\(baseURL)/storage/v1/object/\(bucketName)/\(fileName)"
+        
+        print("[DEBUG] Upload endpoint: \(endpoint)")
+        
+        guard let url = URL(string: endpoint) else {
+            print("[DEBUG] Invalid URL")
+            throw SupabaseError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.allHTTPHeaderFields = headers(authenticated: true)
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.httpBody = imageData
+        
+        print("[DEBUG] Headers: \(headers(authenticated: true))")
+        
+        do {
+            let (data, response) = try await URLSession.shared.data(for: request)
+            
+            guard let httpResponse = response as? HTTPURLResponse else {
+                print("[DEBUG] No HTTP response")
+                throw SupabaseError.invalidResponse
+            }
+            
+            print("[DEBUG] Status code: \(httpResponse.statusCode)")
+            
+            if let body = String(data: data, encoding: .utf8) {
+                print("[DEBUG] Response body: \(body)")
+            }
+            
+            if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
+                let publicUrl = "\(baseURL)/storage/v1/object/public/\(bucketName)/\(fileName)"
+                print("[DEBUG] Success! URL: \(publicUrl)")
+                return publicUrl
+            } else {
+                print("[DEBUG] Upload failed with status: \(httpResponse.statusCode)")
+                throw SupabaseError.serverError(httpResponse.statusCode, "Upload failed")
+            }
+        } catch {
+            print("[DEBUG] Network error: \(error)")
+            throw error
+        }
+    }
     // MARK: - Admin
     func fetchAllPosts() async throws -> [Post] {
         try await fetchPosts(limit: 100, offset: 0)
@@ -522,7 +539,6 @@ class SupabaseService {
     // MARK: - Realtime (Stub)
     func subscribeToPosts() -> AsyncStream<Post> {
         AsyncStream { continuation in
-            // Stub implementation - would connect to Supabase realtime
             continuation.finish()
         }
     }
