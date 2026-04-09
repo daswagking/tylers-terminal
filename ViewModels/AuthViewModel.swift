@@ -191,21 +191,3 @@ class AuthViewModel: ObservableObject {
         }
     }
 }
-rd = ""
-        confirmPassword = ""
-    }
-    
-    private func clearFields() {
-        username = ""
-        password = ""
-        confirmPassword = ""
-        errorMessage = nil
-    }
-    
-    func clearError() {
-        errorMessage = nil
-        if case .error = state {
-            state = .unauthenticated
-        }
-    }
-}
