@@ -87,7 +87,7 @@ struct NewPostView: View {
     // MARK: - Image Picker Section
     private var imagePickerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("SCREENSHOT")
+            Text("SCREENSHOT (OPTIONAL)")
                 .font(TerminalFonts.caption)
                 .foregroundColor(TerminalColors.textSecondary)
             
@@ -254,14 +254,13 @@ struct NewPostView: View {
     
     // MARK: - Computed Properties
     private var canSubmit: Bool {
-        selectedImage != nil && !description.isEmpty
+        !description.isEmpty
     }
     
     // MARK: - Submit Post
     private func submitPost() {
-        guard let image = selectedImage,
-              let imageData = image.jpegData(compressionQuality: 0.8) else {
-            errorMessage = "FAILED TO PROCESS IMAGE"
+        guard !description.isEmpty else {
+            errorMessage = "DESCRIPTION REQUIRED"
             return
         }
         
@@ -271,11 +270,19 @@ struct NewPostView: View {
         
         Task {
             do {
-                // Upload image to Supabase Storage
-                let filename = "\(UUID().uuidString).jpg"
-                let imageUrl = try await SupabaseService.shared.uploadImage(imageData, filename: filename)
+                var imageUrl: String
                 
-                // Create the post with the uploaded image URL
+                if let image = selectedImage,
+                   let imageData = image.jpegData(compressionQuality: 0.8) {
+                    // Upload image to Supabase Storage
+                    let filename = "\(UUID().uuidString).jpg"
+                    imageUrl = try await SupabaseService.shared.uploadImage(imageData, filename: filename)
+                } else {
+                    // No image - use placeholder
+                    imageUrl = "https://via.placeholder.com/400x300/1a1a1a/00ff00?text=NO+IMAGE"
+                }
+                
+                // Create the post with the image URL
                 try await SupabaseService.shared.createPost(
                     imageUrl: imageUrl,
                     description: description,
@@ -305,7 +312,7 @@ struct NewPostView: View {
                 }
             } catch {
                 await MainActor.run {
-                    errorMessage = "FAILED TO CREATE POST"
+                    errorMessage = "FAILED TO CREATE POST: \(error.localizedDescription)"
                     isLoading = false
                 }
             }

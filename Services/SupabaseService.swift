@@ -465,4 +465,67 @@ class SupabaseService {
             continuation.finish()
         }
     }
+    
+    // MARK: - Image Upload
+    func uploadImage(_ imageData: Data, filename: String) async throws -> String {
+        guard let userId = getCurrentUserId() else {
+            throw SupabaseError.authenticationFailed
+        }
+        
+        let bucketName = "trade-images"
+        let filePath = "\(userId)/\(filename)"
+        let endpoint = "\(baseURL)/storage/v1/object/\(bucketName)/\(filePath)"
+        
+        guard let url = URL(string: endpoint) else {
+            throw SupabaseError.invalidURL
+        }
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
+        request.setValue("Bearer \(sessionToken ?? "")", forHTTPHeaderField: "Authorization")
+        request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
+        request.httpBody = imageData
+        
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
+        }
+        
+        if (200...299).contains(httpResponse.statusCode) {
+            let publicUrl = "\(baseURL)/storage/v1/object/public/\(bucketName)/\(filePath)"
+            return publicUrl
+        } else {
+            let errorMessage = String(data: data, encoding: .utf8) ?? "Upload failed"
+            throw SupabaseError.serverError(httpResponse.statusCode, errorMessage)
+        }
+    }
+    
+    // MARK: - Helper Methods
+    private func getCurrentUserId() -> String? {
+        // Extract user ID from JWT token
+        guard let token = sessionToken else { return nil }
+        let parts = token.split(separator: ".")
+        guard parts.count == 3 else { return nil }
+        
+        let payload = String(parts[1])
+        guard let decodedData = base64UrlDecode(payload),
+              let json = try? JSONSerialization.jsonObject(with: decodedData) as? [String: Any] else {
+            return nil
+        }
+        return json["sub"] as? String
+    }
+    
+    private func base64UrlDecode(_ base64Url: String) -> Data? {
+        var base64 = base64Url
+            .replacingOccurrences(of: "-", with: "+")
+            .replacingOccurrences(of: "_", with: "/")
+        
+        while base64.count % 4 != 0 {
+            base64.append("=")
+        }
+        
+        return Data(base64Encoded: base64)
+    }
 }
