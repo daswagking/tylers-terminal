@@ -105,7 +105,7 @@ struct NewPostView: View {
                                 .background(TerminalColors.background)
                                 .clipShape(Circle())
                         }
-                            .padding(8),
+                        .padding(8),
                         alignment: .topTrailing
                     )
             } else {
@@ -259,7 +259,11 @@ struct NewPostView: View {
     
     // MARK: - Submit Post
     private func submitPost() {
-        guard let image = selectedImage else { return }
+        guard let image = selectedImage,
+              let imageData = image.jpegData(compressionQuality: 0.8) else {
+            errorMessage = "FAILED TO PROCESS IMAGE"
+            return
+        }
         
         isLoading = true
         errorMessage = nil
@@ -267,10 +271,11 @@ struct NewPostView: View {
         
         Task {
             do {
-                // Upload image first
-                let imageUrl = try await SupabaseService.shared.uploadImage(image)
+                // Upload image to Supabase Storage
+                let filename = "\(UUID().uuidString).jpg"
+                let imageUrl = try await SupabaseService.shared.uploadImage(imageData, filename: filename)
                 
-                // Create post with uploaded image URL
+                // Create the post with the uploaded image URL
                 try await SupabaseService.shared.createPost(
                     imageUrl: imageUrl,
                     description: description,
@@ -298,14 +303,9 @@ struct NewPostView: View {
                         presentationMode.wrappedValue.dismiss()
                     }
                 }
-            } catch let error as SupabaseError {
-                await MainActor.run {
-                    errorMessage = error.localizedDescription
-                    isLoading = false
-                }
             } catch {
                 await MainActor.run {
-                    errorMessage = "FAILED TO CREATE POST: \(error.localizedDescription)"
+                    errorMessage = "FAILED TO CREATE POST"
                     isLoading = false
                 }
             }
