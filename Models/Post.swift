@@ -7,7 +7,7 @@ import Foundation
 
 struct Post: Identifiable, Codable, Equatable {
     let id: String
-    let userId: String
+    let authorUsername: String
     let imageUrl: String
     let description: String
     let ticker: String?
@@ -17,10 +17,11 @@ struct Post: Identifiable, Codable, Equatable {
     let heartCount: Int
     let commentCount: Int
     let createdAt: Date
+    let isVerified: Bool
     
     enum CodingKeys: String, CodingKey {
         case id
-        case userId = "user_id"
+        case authorUsername = "author_username"
         case imageUrl = "image_url"
         case description
         case ticker
@@ -30,6 +31,7 @@ struct Post: Identifiable, Codable, Equatable {
         case heartCount = "heart_count"
         case commentCount = "comment_count"
         case createdAt = "created_at"
+        case isVerified = "is_verified"
     }
     
     enum PostCategory: String, Codable, CaseIterable {
@@ -59,14 +61,6 @@ struct Post: Identifiable, Codable, Equatable {
     
     var formattedTimestamp: String {
         return createdAt.timeAgoDisplay
-    }
-    
-    var authorUsername: String {
-        return "TYLER"
-    }
-    
-    var isVerified: Bool {
-        return true
     }
     
     var userReactions: UserReactions? {

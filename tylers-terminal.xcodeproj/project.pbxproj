@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D10A855F2F80A5C9009406A2 /* Comment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10A855E2F80A5C6009406A2 /* Comment.swift */; };
 		D10A85612F80A72D009406A2 /* AssetDatabase.swift in Sources */ = {isa = PBXBuildFile; fileRef = D10A85602F80A720009406A2 /* AssetDatabase.swift */; };
+		D12F54F32F882CB300EAC8AB /* Post.swift in Sources */ = {isa = PBXBuildFile; fileRef = D12F54F22F882C8A00EAC8AB /* Post.swift */; };
 		D14967802F7F7CE500E21A55 /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = D149677F2F7F7CE500E21A55 /* FirebaseCore */; };
 		D14967822F7F7CEF00E21A55 /* FirebaseMessaging in Frameworks */ = {isa = PBXBuildFile; productRef = D14967812F7F7CEF00E21A55 /* FirebaseMessaging */; };
 		D163A6162F7F75DB00A9EFDF /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D163A6152F7F75DB00A9EFDF /* Auth */; };
@@ -27,7 +28,6 @@
 		D167C4CF2F7F553D00BF7248 /* User.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B02F7F553D00BF7248 /* User.swift */; };
 		D167C4D02F7F553D00BF7248 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BA2F7F553D00BF7248 /* AuthViewModel.swift */; };
 		D167C4D32F7F553D00BF7248 /* ActivityViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4B92F7F553D00BF7248 /* ActivityViewModel.swift */; };
-		D167C4D42F7F553D00BF7248 /* Post.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4AF2F7F553D00BF7248 /* Post.swift */; };
 		D167C4D52F7F553D00BF7248 /* FeedViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BB2F7F553D00BF7248 /* FeedViewModel.swift */; };
 		D167C4D72F7F553D00BF7248 /* RequestMarketViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D167C4BD2F7F553D00BF7248 /* RequestMarketViewModel.swift */; };
 		D167C4D92F7F553D00BF7248 /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = D167C4AB2F7F553D00BF7248 /* GoogleService-Info.plist */; };
@@ -43,11 +43,11 @@
 /* Begin PBXFileReference section */
 		D10A855E2F80A5C6009406A2 /* Comment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Comment.swift; sourceTree = "<group>"; };
 		D10A85602F80A720009406A2 /* AssetDatabase.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetDatabase.swift; sourceTree = "<group>"; };
+		D12F54F22F882C8A00EAC8AB /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
 		D167C49C2F7F550A00BF7248 /* tylers-terminal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "tylers-terminal.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D167C4AB2F7F553D00BF7248 /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 		D167C4AD2F7F553D00BF7248 /* AssetRequest.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssetRequest.swift; sourceTree = "<group>"; };
 		D167C4AE2F7F553D00BF7248 /* Notification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notification.swift; sourceTree = "<group>"; };
-		D167C4AF2F7F553D00BF7248 /* Post.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Post.swift; sourceTree = "<group>"; };
 		D167C4B02F7F553D00BF7248 /* User.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = User.swift; sourceTree = "<group>"; };
 		D167C4B22F7F553D00BF7248 /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		D167C4B32F7F553D00BF7248 /* SupabaseService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SupabaseService.swift; sourceTree = "<group>"; };
@@ -129,9 +129,9 @@
 			isa = PBXGroup;
 			children = (
 				D10A855E2F80A5C6009406A2 /* Comment.swift */,
+				D12F54F22F882C8A00EAC8AB /* Post.swift */,
 				D167C4AD2F7F553D00BF7248 /* AssetRequest.swift */,
 				D167C4AE2F7F553D00BF7248 /* Notification.swift */,
-				D167C4AF2F7F553D00BF7248 /* Post.swift */,
 				D167C4B02F7F553D00BF7248 /* User.swift */,
 			);
 			path = Models;
@@ -280,6 +280,7 @@
 				D10A855F2F80A5C9009406A2 /* Comment.swift in Sources */,
 				D167C4D02F7F553D00BF7248 /* AuthViewModel.swift in Sources */,
 				D18E02BB2F7F93BF00423073 /* ActivityView.swift in Sources */,
+				D12F54F32F882CB300EAC8AB /* Post.swift in Sources */,
 				D18E02BC2F7F93BF00423073 /* AdminPanelView.swift in Sources */,
 				D18E02BD2F7F93BF00423073 /* FeedView.swift in Sources */,
 				D18E02BE2F7F93BF00423073 /* LoginView.swift in Sources */,
@@ -288,7 +289,6 @@
 				D10A85612F80A72D009406A2 /* AssetDatabase.swift in Sources */,
 				D18E02C12F7F93BF00423073 /* RequestMarketView.swift in Sources */,
 				D167C4D32F7F553D00BF7248 /* ActivityViewModel.swift in Sources */,
-				D167C4D42F7F553D00BF7248 /* Post.swift in Sources */,
 				D167C4D52F7F553D00BF7248 /* FeedViewModel.swift in Sources */,
 				D167C4D72F7F553D00BF7248 /* RequestMarketViewModel.swift in Sources */,
 			);
