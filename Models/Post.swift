@@ -33,10 +33,10 @@ struct Post: Identifiable, Codable, Equatable {
     }
     
     enum PostCategory: String, Codable, CaseIterable {
-        case trade = "trade"
-        case analysis = "analysis"
-        case news = "news"
-        case question = "question"
+        case trade = "TRADE"
+        case analysis = "ANALYSIS"
+        case news = "NEWS"
+        case question = "QUESTION"
         
         var displayName: String {
             switch self {

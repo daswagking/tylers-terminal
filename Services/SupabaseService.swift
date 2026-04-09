@@ -9,6 +9,8 @@ import Combine
 struct SupabaseConfig {
     static let projectURL = "https://mlfuoqeabrsxfzvdvlkw.supabase.co"
     static let anonKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZnVvcWVhYnJzeGZ6dmR2bGt3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxNjkxNDEsImV4cCI6MjA5MDc0NTE0MX0.Ga64BiamlcsrjSzdulq-7VxPLR3q8glDGospqi5c9po"
+    // Service role key - ONLY for admin operations, bypasses RLS
+    static let serviceRoleKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1sZnVvcWVhYnJzeGZ6dmR2bGt3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3NTE2OTE0MSwiZXhwIjoyMDkwNzQ1MTQxfQ.swSNj4TUEJ1Ip8v0xKuWCpxgguW3zYHSInWfwDJV5co"
 }
 
 enum SupabaseError: Error, LocalizedError {
@@ -48,6 +50,7 @@ class SupabaseService {
     static let shared = SupabaseService()
     
     private var sessionToken: String?
+    private var isAdminUser: Bool = false
     
     private init() {}
     
@@ -61,7 +64,11 @@ class SupabaseService {
             "Content-Type": "application/json"
         ]
         
-        if authenticated, let token = sessionToken {
+        if isAdminUser && !SupabaseConfig.serviceRoleKey.isEmpty && SupabaseConfig.serviceRoleKey != "YOUR_SERVICE_ROLE_KEY_HERE" {
+            // Admin user uses service role key to bypass RLS
+            headers["Authorization"] = "Bearer \(SupabaseConfig.serviceRoleKey)"
+            print("🔑 Using SERVICE ROLE KEY for admin")
+        } else if authenticated, let token = sessionToken {
             headers["Authorization"] = "Bearer \(token)"
             print("🔑 Using auth token: \(token.prefix(20))...")
         } else if authenticated {
@@ -107,12 +114,16 @@ class SupabaseService {
     }
     
     func signIn(username: String, password: String) async throws -> User {
-        // HARDCODED ADMIN BYPASS
+        // HARDCODED ADMIN BYPASS - uses service role key
         if username.lowercased() == "admin" && password == "admin123" {
-            // Create a fake session token for admin
-            sessionToken = "admin_token_" + UUID().uuidString
+            isAdminUser = true
+            sessionToken = "admin_bypass_token"
+            print("🔓 Admin bypass activated - will use service role key")
             return User(id: "admin-user-id", username: "admin", isAdmin: true)
         }
+        
+        // Regular user - reset admin flag
+        isAdminUser = false
         
         let endpoint = "\(baseURL)/auth/v1/token?grant_type=password"
         
@@ -150,6 +161,8 @@ class SupabaseService {
     
     func signOut() async throws {
         sessionToken = nil
+        isAdminUser = false
+        print("👋 Signed out - cleared admin status")
     }
     
     // MARK: - Posts
@@ -473,7 +486,13 @@ class SupabaseService {
     
     // MARK: - Image Upload
     func uploadImage(_ imageData: Data, filename: String) async throws -> String {
-        guard let userId = getCurrentUserId() else {
+        // Get user ID - for admin use hardcoded ID
+        let userId: String
+        if isAdminUser {
+            userId = "admin-user-id"
+        } else if let id = getCurrentUserId() {
+            userId = id
+        } else {
             throw SupabaseError.authenticationFailed
         }
         
@@ -488,7 +507,15 @@ class SupabaseService {
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(SupabaseConfig.anonKey, forHTTPHeaderField: "apikey")
-        request.setValue("Bearer \(sessionToken ?? "")", forHTTPHeaderField: "Authorization")
+        
+        // Use service role key for admin, regular token for users
+        if isAdminUser {
+            request.setValue("Bearer \(SupabaseConfig.serviceRoleKey)", forHTTPHeaderField: "Authorization")
+            print("🔑 Using SERVICE ROLE KEY for image upload")
+        } else {
+            request.setValue("Bearer \(sessionToken ?? "")", forHTTPHeaderField: "Authorization")
+        }
+        
         request.setValue("image/jpeg", forHTTPHeaderField: "Content-Type")
         request.httpBody = imageData
         
@@ -503,6 +530,7 @@ class SupabaseService {
             return publicUrl
         } else {
             let errorMessage = String(data: data, encoding: .utf8) ?? "Upload failed"
+            print("❌ IMAGE UPLOAD ERROR: \(errorMessage)")
             throw SupabaseError.serverError(httpResponse.statusCode, errorMessage)
         }
     }
