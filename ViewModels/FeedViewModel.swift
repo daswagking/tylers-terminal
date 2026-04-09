@@ -1,205 +1,167 @@
 //
-//  AuthViewModel.swift
+//  FeedViewModel.swift
 //  TYLER'S TERMINAL
-//
-//  Authentication state management
 //
 
 import SwiftUI
 import Combine
 
 @MainActor
-class AuthViewModel: ObservableObject {
-    
-    // MARK: - Published Properties
-    @Published var state: AuthState = .unauthenticated
-    @Published var username: String = ""
-    @Published var password: String = ""
-    @Published var confirmPassword: String = ""
-    @Published var errorMessage: String?
+class FeedViewModel: ObservableObject {
+    @Published var posts: [Post] = []
     @Published var isLoading = false
+    @Published var isRefreshing = false
+    @Published var errorMessage: String?
+    @Published var hasMorePosts = true
     
-    // MARK: - Computed Properties
-    var isAuthenticated: Bool {
-        if case .authenticated = state {
-            return true
-        }
-        return false
-    }
+    private var currentOffset = 0
+    private let postsPerPage = 20
     
-    var currentUser: User? {
-        if case .authenticated(let user) = state {
-            return user
-        }
-        return nil
-    }
+    private var subscriptionTask: Task<Void, Never>?
+    private var isSubscribed = false
     
-    // MARK: - Validation
-    var canSignIn: Bool {
-        return !username.isEmpty && password.count >= 6
-    }
-    
-    var canSignUp: Bool {
-        return !username.isEmpty &&
-               username.count >= 3 &&
-               password.count >= 6 &&
-               password == confirmPassword
-    }
-    
-    var validationError: String? {
-        if username.isEmpty {
-            return "USERNAME REQUIRED"
-        }
-        if username.count < 3 {
-            return "USERNAME MIN 3 CHARS"
-        }
-        if password.isEmpty {
-            return "PASSWORD REQUIRED"
-        }
-        if password.count < 6 {
-            return "PASSWORD MIN 6 CHARS"
-        }
-        if !confirmPassword.isEmpty && password != confirmPassword {
-            return "PASSWORDS DO NOT MATCH"
-        }
-        return nil
-    }
-    
-    // MARK: - Initialization
     init() {
-        checkSession()
+        setupNotifications()
     }
     
-    // MARK: - Session Management
-    private func checkSession() {
-        if let savedUsername = UserDefaults.standard.string(forKey: "savedUsername"),
-           let savedUserId = UserDefaults.standard.string(forKey: "savedUserId") {
-            let user = User(
-                id: savedUserId,
-                username: savedUsername,
-                pushNotificationsEnabled: UserDefaults.standard.bool(forKey: "pushNotificationsEnabled")
-            )
-            state = .authenticated(user)
+    deinit {
+        subscriptionTask?.cancel()
+    }
+    
+    private func setupNotifications() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleNewTradeNotification),
+            name: Notification.Name("NewTradeNotification"),
+            object: nil
+        )
+    }
+    
+    @objc private func handleNewTradeNotification(_ notification: Notification) {
+        Task {
+            await refreshPosts()
         }
     }
     
-    // MARK: - Sign In
-    func signIn() async {
-        guard canSignIn else {
-            errorMessage = validationError
-            return
-        }
+    func fetchPosts() async {
+        guard !isLoading else { return }
         
         isLoading = true
         errorMessage = nil
-        state = .authenticating
         
         do {
-            let user = try await SupabaseService.shared.signIn(
-                username: username.trimmingCharacters(in: .whitespaces),
-                password: password
+            let newPosts = try await SupabaseService.shared.fetchPosts(
+                limit: postsPerPage,
+                offset: currentOffset
             )
             
-            saveSession(user: user)
-            state = .authenticated(user)
-            clearFields()
+            if currentOffset == 0 {
+                posts = newPosts
+            } else {
+                posts.append(contentsOf: newPosts)
+            }
+            
+            hasMorePosts = newPosts.count == postsPerPage
+            currentOffset += newPosts.count
             
         } catch let error as SupabaseError {
-            state = .error(error.localizedDescription)
             errorMessage = error.localizedDescription
         } catch {
-            state = .error("CONNECTION LOST")
             errorMessage = "CONNECTION LOST"
         }
         
         isLoading = false
     }
     
-    // MARK: - Sign Up
-    func signUp() async {
-        guard canSignUp else {
-            errorMessage = validationError
-            return
-        }
+    func refreshPosts() async {
+        isRefreshing = true
+        currentOffset = 0
         
-        isLoading = true
-        errorMessage = nil
-        state = .authenticating
+        await fetchPosts()
         
-        do {
-            let user = try await SupabaseService.shared.signUp(
-                username: username.trimmingCharacters(in: .whitespaces).lowercased(),
-                password: password
-            )
+        isRefreshing = false
+    }
+    
+    func loadMorePosts() async {
+        guard hasMorePosts && !isLoading else { return }
+        
+        await fetchPosts()
+    }
+    
+    func subscribeToRealtimeUpdates() {
+        guard !isSubscribed else { return }
+        
+        isSubscribed = true
+        subscriptionTask = Task {
+            let stream = SupabaseService.shared.subscribeToPosts()
             
-            saveSession(user: user)
-            state = .authenticated(user)
-            clearFields()
-            
-        } catch let error as SupabaseError {
-            state = .error(error.localizedDescription)
-            errorMessage = error.localizedDescription
-        } catch {
-            state = .error("REGISTRATION FAILED")
-            errorMessage = "REGISTRATION FAILED"
+            for await newPost in stream {
+                guard !Task.isCancelled else { break }
+                
+                if !posts.contains(where: { $0.id == newPost.id }) {
+                    await MainActor.run {
+                        withAnimation(.easeIn(duration: 0.3)) {
+                            posts.insert(newPost, at: 0)
+                        }
+                    }
+                }
+            }
         }
-        
-        isLoading = false
     }
     
-    // MARK: - Sign Out
-    func signOut() async {
-        isLoading = true
-        
+    func unsubscribeFromRealtimeUpdates() {
+        subscriptionTask?.cancel()
+        isSubscribed = false
+    }
+    
+    func toggleReaction(postId: String, type: ReactionType) async {
         do {
-            try await SupabaseService.shared.signOut()
-            clearSession()
-            state = .unauthenticated
+            try await SupabaseService.shared.toggleReaction(postId: postId, type: type)
         } catch {
-            errorMessage = "SIGN OUT FAILED"
+            errorMessage = "REACTION FAILED"
         }
-        
-        isLoading = false
     }
     
-    // MARK: - Change Password
-    func changePassword(currentPassword: String, newPassword: String) async -> Bool {
-        guard newPassword.count >= 6 else {
-            errorMessage = "PASSWORD MIN 6 CHARS"
-            return false
+    func fetchComments(for postId: String) async -> [Comment] {
+        do {
+            return try await SupabaseService.shared.fetchComments(for: postId)
+        } catch {
+            errorMessage = "FAILED TO LOAD COMMENTS"
+            return []
         }
-        
-        isLoading = true
-        isLoading = false
-        return true
     }
     
-    // MARK: - Helper Methods
-    private func saveSession(user: User) {
-        UserDefaults.standard.set(user.username, forKey: "savedUsername")
-        UserDefaults.standard.set(user.id, forKey: "savedUserId")
-        UserDefaults.standard.set(user.pushNotificationsEnabled, forKey: "pushNotificationsEnabled")
+    func addComment(postId: String, content: String) async {
+        do {
+            try await SupabaseService.shared.addComment(postId: postId, content: content)
+        } catch {
+            errorMessage = "COMMENT FAILED"
+        }
     }
     
-    private func clearSession() {
-        UserDefaults.standard.removeObject(forKey: "savedUsername")
-        UserDefaults.standard.removeObject(forKey: "savedUserId")
-        username = ""
-        password = ""
-        confirmPassword = ""
+    func fetchAllPosts() async -> [Post] {
+        do {
+            return try await SupabaseService.shared.fetchAllPosts()
+        } catch {
+            errorMessage = "FAILED TO LOAD POSTS"
+            return []
+        }
     }
     
-    private func clearFields() {
-        username = ""
-        password = ""
-        confirmPassword = ""
-        errorMessage = nil
+    func deletePost(postId: String) async {
+        do {
+            try await SupabaseService.shared.deletePost(postId: postId)
+            await refreshPosts()
+        } catch {
+            errorMessage = "FAILED TO DELETE POST"
+        }
+    }
+    
+    func post(for id: String) -> Post? {
+        return posts.first { $0.id == id }
     }
     
     func clearError() {
         errorMessage = nil
-        if case .error = state {
-            state = .unauthenticated
-        }
     }
 }
