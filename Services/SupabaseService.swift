@@ -184,9 +184,21 @@ class SupabaseService {
         }
         
         if httpResponse.statusCode == 200 {
-            return try JSONDecoder().decode([Post].self, from: data)
+            let jsonString = String(data: data, encoding: .utf8) ?? ""
+            print("📥 FETCH POSTS RESPONSE: \(jsonString.prefix(500))...")
+            
+            do {
+                let posts = try JSONDecoder().decode([Post].self, from: data)
+                print("✅ FETCHED \(posts.count) POSTS")
+                return posts
+            } catch {
+                print("❌ DECODE ERROR: \(error)")
+                throw error
+            }
         } else {
-            throw SupabaseError.serverError(httpResponse.statusCode, "")
+            let errorBody = String(data: data, encoding: .utf8) ?? ""
+            print("❌ FETCH POSTS ERROR: Status \(httpResponse.statusCode), Body: \(errorBody)")
+            throw SupabaseError.serverError(httpResponse.statusCode, errorBody)
         }
     }
     
@@ -200,7 +212,9 @@ class SupabaseService {
         var body: [String: Any] = [
             "image_url": imageUrl,
             "description": description,
-            "category": category.rawValue
+            "category": category.rawValue,
+            "author_username": "TYLER",
+            "is_verified": true
         ]
         
         if let ticker = ticker {
