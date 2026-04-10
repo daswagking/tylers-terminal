@@ -16,7 +16,6 @@ struct FeedView: View {
     @State private var showAdminPanel = false
     @State private var postToDelete: Post?
     @State private var showDeleteConfirmation = false
-    @State private var showPostDetail = false
     @State private var detailPost: Post?
     
     var body: some View {
@@ -76,10 +75,8 @@ struct FeedView: View {
             .sheet(isPresented: $showAdminPanel) {
                 AdminPanelView()
             }
-            .sheet(isPresented: $showPostDetail) {
-                if let post = detailPost {
-                    PostDetailView(post: post)
-                }
+            .sheet(item: $detailPost) { post in
+                PostDetailView(post: post)
             }
             .alert("DELETE POST?", isPresented: $showDeleteConfirmation) {
                 Button("CANCEL", role: .cancel) {}
@@ -174,7 +171,6 @@ struct FeedView: View {
                         post: post,
                         onTap: {
                             detailPost = post
-                            showPostDetail = true
                         },
                         onReaction: { type in
                             Task {

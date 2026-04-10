@@ -2,73 +2,64 @@
 //  User.swift
 //  TYLER'S TERMINAL
 //
+//  User model with ISO8601 date decoding
+//
 
 import Foundation
 
-struct User: Identifiable, Codable, Equatable {
+struct User: Identifiable, Codable {
     let id: String
     let username: String
-    let createdAt: Date
+    let email: String
     let isAdmin: Bool
-    let terminalId: String
-    var pushNotificationsEnabled: Bool
+    let isVerified: Bool
+    let createdAt: Date
+    let updatedAt: Date
     
     enum CodingKeys: String, CodingKey {
         case id
         case username
-        case createdAt = "created_at"
+        case email
         case isAdmin = "is_admin"
-        case terminalId = "terminal_id"
-        case pushNotificationsEnabled = "push_notifications_enabled"
+        case isVerified = "is_verified"
+        case createdAt = "created_at"
+        case updatedAt = "updated_at"
     }
     
-    init(
-        id: String,
-        username: String,
-        createdAt: Date = Date(),
-        isAdmin: Bool = false,
-        terminalId: String? = nil,
-        pushNotificationsEnabled: Bool = true
-    ) {
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        username = try container.decode(String.self, forKey: .username)
+        email = try container.decode(String.self, forKey: .email)
+        isAdmin = try container.decode(Bool.self, forKey: .isAdmin)
+        isVerified = try container.decode(Bool.self, forKey: .isVerified)
+        
+        // Use ISO8601 date decoding
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    }
+    
+    init(id: String, username: String, email: String, isAdmin: Bool = false, isVerified: Bool = false, createdAt: Date = Date(), updatedAt: Date = Date()) {
         self.id = id
         self.username = username
-        self.createdAt = createdAt
+        self.email = email
         self.isAdmin = isAdmin
-        self.terminalId = terminalId ?? User.generateTerminalId()
-        self.pushNotificationsEnabled = pushNotificationsEnabled
-    }
-    
-    static func generateTerminalId() -> String {
-        let hexChars = "0123456789ABCDEF"
-        var hex = "TT-"
-        for _ in 0..<8 {
-            hex.append(hexChars.randomElement()!)
-        }
-        hex.append("-")
-        for _ in 0..<4 {
-            hex.append(hexChars.randomElement()!)
-        }
-        return hex
-    }
-    
-    var displayName: String {
-        return username.uppercased()
-    }
-    
-    var displayTerminalId: String {
-        return terminalId
-    }
-    
-    var formattedDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: createdAt)
+        self.isVerified = isVerified
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
     }
 }
 
-enum AuthState: Equatable {
-    case unauthenticated
-    case authenticating
-    case authenticated(User)
-    case error(String)
+// MARK: - User Profile Extension
+extension User {
+    var displayName: String {
+        username.uppercased()
+    }
+    
+    var formattedJoinDate: String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: createdAt)
+    }
 }
