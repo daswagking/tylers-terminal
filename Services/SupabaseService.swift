@@ -320,92 +320,31 @@ class SupabaseService {
     
     // MARK: - Reactions
     func toggleReaction(postId: String, type: ReactionType) async throws {
-        // First, check if user already has this reaction on this post
-        let userId = try await getCurrentUserId()
-        let checkEndpoint = "\(baseURL)/rest/v1/reactions?post_id=eq.\(postId)&user_id=eq.\(userId)&type=eq.\(type.rawValue)"
-        
-        guard let checkUrl = URL(string: checkEndpoint) else {
-            throw SupabaseError.invalidURL
-        }
-        
-        var checkRequest = URLRequest(url: checkUrl)
-        checkRequest.httpMethod = "GET"
-        checkRequest.allHTTPHeaderFields = headers(authenticated: true)
-        
-        let (checkData, checkResponse) = try await URLSession.shared.data(for: checkRequest)
-        
-        guard let checkHttpResponse = checkResponse as? HTTPURLResponse else {
-            throw SupabaseError.invalidResponse
-        }
-        
-        let existingReactions = try JSONDecoder().decode([Reaction].self, from: checkData)
-        
-        if let existingReaction = existingReactions.first {
-            // Reaction exists, delete it (toggle off)
-            let deleteEndpoint = "\(baseURL)/rest/v1/reactions?id=eq.\(existingReaction.id)"
-            
-            guard let deleteUrl = URL(string: deleteEndpoint) else {
-                throw SupabaseError.invalidURL
-            }
-            
-            var deleteRequest = URLRequest(url: deleteUrl)
-            deleteRequest.httpMethod = "DELETE"
-            deleteRequest.allHTTPHeaderFields = headers(authenticated: true)
-            
-            let (_, deleteResponse) = try await URLSession.shared.data(for: deleteRequest)
-            
-            guard let deleteHttpResponse = deleteResponse as? HTTPURLResponse,
-                  deleteHttpResponse.statusCode == 200 || deleteHttpResponse.statusCode == 204 else {
-                throw SupabaseError.invalidResponse
-            }
-        } else {
-            // Reaction doesn't exist, create it (toggle on)
-            let createEndpoint = "\(baseURL)/rest/v1/reactions"
-            
-            guard let createUrl = URL(string: createEndpoint) else {
-                throw SupabaseError.invalidURL
-            }
-            
-            let body: [String: Any] = [
-                "post_id": postId,
-                "type": type.rawValue
-            ]
-            
-            var createRequest = URLRequest(url: createUrl)
-            createRequest.httpMethod = "POST"
-            createRequest.allHTTPHeaderFields = headers(authenticated: true)
-            createRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
-            
-            let (_, createResponse) = try await URLSession.shared.data(for: createRequest)
-            
-            guard let createHttpResponse = createResponse as? HTTPURLResponse,
-                  createHttpResponse.statusCode == 201 else {
-                throw SupabaseError.invalidResponse
-            }
-        }
-    }
-    
-    private func getCurrentUserId() async throws -> String {
-        // Get current user ID from session or auth
-        let endpoint = "\(baseURL)/auth/v1/user"
+        let endpoint = "\(baseURL)/rest/v1/reactions"
         
         guard let url = URL(string: endpoint) else {
             throw SupabaseError.invalidURL
         }
         
+        let body: [String: Any] = [
+            "post_id": postId,
+            "type": type.rawValue
+        ]
+        
         var request = URLRequest(url: url)
-        request.httpMethod = "GET"
+        request.httpMethod = "POST"
         request.allHTTPHeaderFields = headers(authenticated: true)
+        request.httpBody = try JSONSerialization.data(withJSONObject: body)
         
-        let (data, response) = try await URLSession.shared.data(for: request)
+        let (_, response) = try await URLSession.shared.data(for: request)
         
-        guard let httpResponse = response as? HTTPURLResponse,
-              httpResponse.statusCode == 200 else {
-            throw SupabaseError.authenticationFailed
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw SupabaseError.invalidResponse
         }
         
-        let user = try JSONDecoder().decode(AuthUser.self, from: data)
-        return user.id
+        if httpResponse.statusCode != 201 && httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError(httpResponse.statusCode, "")
+        }
     }
     
     // MARK: - Notifications
