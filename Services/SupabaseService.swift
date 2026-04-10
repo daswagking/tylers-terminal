@@ -51,6 +51,7 @@ class SupabaseService {
     
     private var sessionToken: String?
     private var isAdminUser: Bool = false
+    private var currentUsername: String = ""
     
     private init() {}
     
@@ -107,7 +108,7 @@ class SupabaseService {
         if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
-            let email = "\(username.lowercased())@tylersterminal.local"
+            currentUsername = username
             return User(id: authResponse.user.id, username: username, email: email)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "Signup failed")
@@ -119,6 +120,7 @@ class SupabaseService {
         if username.lowercased() == "admin" && password == "admin123" {
             isAdminUser = true
             sessionToken = "admin_bypass_token"
+            currentUsername = "admin"
             print("🔓 Admin bypass activated - will use service role key")
             return User(id: "admin-user-id", username: "admin", email: "admin@tylersterminal.local", isAdmin: true)
         }
@@ -153,6 +155,7 @@ class SupabaseService {
         if httpResponse.statusCode == 200 {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
+            currentUsername = username
             let email = "\(username.lowercased())@tylersterminal.local"
             return User(id: authResponse.user.id, username: username, email: email)
         } else {
@@ -164,6 +167,7 @@ class SupabaseService {
     func signOut() async throws {
         sessionToken = nil
         isAdminUser = false
+        currentUsername = ""
         print("👋 Signed out - cleared admin status")
     }
     
@@ -284,7 +288,9 @@ class SupabaseService {
         }
         
         if httpResponse.statusCode == 200 {
-            return try JSONDecoder().decode([Comment].self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([Comment].self, from: data)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "")
         }
@@ -297,9 +303,13 @@ class SupabaseService {
             throw SupabaseError.invalidURL
         }
         
+        // Get current username for the comment
+        let username = isAdminUser ? "TYLER" : currentUsername.uppercased()
+        
         let body: [String: Any] = [
             "post_id": postId,
-            "content": content
+            "content": content,
+            "author_username": username
         ]
         
         var request = URLRequest(url: url)
@@ -318,32 +328,74 @@ class SupabaseService {
         }
     }
     
-    // MARK: - Reactions
+    // MARK: - Reactions (Fixed with proper toggle)
     func toggleReaction(postId: String, type: ReactionType) async throws {
-        let endpoint = "\(baseURL)/rest/v1/reactions"
+        // First, check if user already has this reaction
+        let userId = getCurrentUserId() ?? ""
+        let checkEndpoint = "\(baseURL)/rest/v1/reactions?post_id=eq.\(postId)&user_id=eq.\(userId)&type=eq.\(type.rawValue)"
         
-        guard let url = URL(string: endpoint) else {
+        guard let checkUrl = URL(string: checkEndpoint) else {
             throw SupabaseError.invalidURL
         }
         
-        let body: [String: Any] = [
-            "post_id": postId,
-            "type": type.rawValue
-        ]
+        var checkRequest = URLRequest(url: checkUrl)
+        checkRequest.httpMethod = "GET"
+        checkRequest.allHTTPHeaderFields = headers(authenticated: true)
         
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = headers(authenticated: true)
-        request.httpBody = try JSONSerialization.data(withJSONObject: body)
+        let (checkData, checkResponse) = try await URLSession.shared.data(for: checkRequest)
         
-        let (_, response) = try await URLSession.shared.data(for: request)
-        
-        guard let httpResponse = response as? HTTPURLResponse else {
+        guard let checkHttpResponse = checkResponse as? HTTPURLResponse else {
             throw SupabaseError.invalidResponse
         }
         
-        if httpResponse.statusCode != 201 && httpResponse.statusCode != 200 {
-            throw SupabaseError.serverError(httpResponse.statusCode, "")
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .iso8601
+        let existingReactions = try decoder.decode([Reaction].self, from: checkData)
+        
+        if let existingReaction = existingReactions.first {
+            // Reaction exists, delete it (toggle off)
+            let deleteEndpoint = "\(baseURL)/rest/v1/reactions?id=eq.\(existingReaction.id)"
+            
+            guard let deleteUrl = URL(string: deleteEndpoint) else {
+                throw SupabaseError.invalidURL
+            }
+            
+            var deleteRequest = URLRequest(url: deleteUrl)
+            deleteRequest.httpMethod = "DELETE"
+            deleteRequest.allHTTPHeaderFields = headers(authenticated: true)
+            
+            let (_, deleteResponse) = try await URLSession.shared.data(for: deleteRequest)
+            
+            guard let deleteHttpResponse = deleteResponse as? HTTPURLResponse,
+                  deleteHttpResponse.statusCode == 200 || deleteHttpResponse.statusCode == 204 else {
+                throw SupabaseError.invalidResponse
+            }
+            print("✅ Reaction removed (toggled off)")
+        } else {
+            // Reaction doesn't exist, create it (toggle on)
+            let createEndpoint = "\(baseURL)/rest/v1/reactions"
+            
+            guard let createUrl = URL(string: createEndpoint) else {
+                throw SupabaseError.invalidURL
+            }
+            
+            let body: [String: Any] = [
+                "post_id": postId,
+                "type": type.rawValue
+            ]
+            
+            var createRequest = URLRequest(url: createUrl)
+            createRequest.httpMethod = "POST"
+            createRequest.allHTTPHeaderFields = headers(authenticated: true)
+            createRequest.httpBody = try JSONSerialization.data(withJSONObject: body)
+            
+            let (_, createResponse) = try await URLSession.shared.data(for: createRequest)
+            
+            guard let createHttpResponse = createResponse as? HTTPURLResponse,
+                  createHttpResponse.statusCode == 201 else {
+                throw SupabaseError.invalidResponse
+            }
+            print("✅ Reaction added (toggled on)")
         }
     }
     
@@ -450,7 +502,9 @@ class SupabaseService {
         }
         
         if httpResponse.statusCode == 200 {
-            return try JSONDecoder().decode([AssetRequest].self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([AssetRequest].self, from: data)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "")
         }
@@ -479,7 +533,9 @@ class SupabaseService {
         }
         
         if httpResponse.statusCode == 200 {
-            return try JSONDecoder().decode([User].self, from: data)
+            let decoder = JSONDecoder()
+            decoder.dateDecodingStrategy = .iso8601
+            return try decoder.decode([User].self, from: data)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "")
         }

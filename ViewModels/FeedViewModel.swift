@@ -117,6 +117,8 @@ class FeedViewModel: ObservableObject {
     func toggleReaction(postId: String, type: ReactionType) async {
         do {
             try await SupabaseService.shared.toggleReaction(postId: postId, type: type)
+            // Refresh posts to update reaction counts
+            await refreshPosts()
         } catch {
             errorMessage = "REACTION FAILED"
         }
@@ -134,6 +136,8 @@ class FeedViewModel: ObservableObject {
     func addComment(postId: String, content: String) async {
         do {
             try await SupabaseService.shared.addComment(postId: postId, content: content)
+            // Refresh posts to update comment counts
+            await refreshPosts()
         } catch {
             errorMessage = "COMMENT FAILED"
         }

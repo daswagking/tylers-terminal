@@ -13,9 +13,11 @@ import FirebaseMessaging
 @main
 struct TylersTerminalApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    
     @StateObject private var authViewModel = AuthViewModel()
     @StateObject private var feedViewModel = FeedViewModel()
     @StateObject private var activityViewModel = ActivityViewModel()
+    @StateObject private var requestMarketViewModel = RequestMarketViewModel()
     
     var body: some Scene {
         WindowGroup {
@@ -23,6 +25,7 @@ struct TylersTerminalApp: App {
                 .environmentObject(authViewModel)
                 .environmentObject(feedViewModel)
                 .environmentObject(activityViewModel)
+                .environmentObject(requestMarketViewModel)
                 .preferredColorScheme(.dark)
         }
     }
@@ -63,30 +66,17 @@ struct MainTabView: View {
             
             ActivityView()
                 .tabItem {
-                    Image(systemName: "bell")
+                    Image(systemName: "bell.fill")
                     Text("ACTIVITY")
                 }
-                .badge(activityViewModel.unreadCount > 0 ? activityViewModel.unreadCount : 0)
+                .badge(activityViewModel.unreadCount)
             
             ProfileView()
                 .tabItem {
-                    Image(systemName: "person")
+                    Image(systemName: "person.fill")
                     Text("PROFILE")
                 }
         }
         .accentColor(TerminalColors.primary)
-        .onAppear {
-            let appearance = UITabBarAppearance()
-            appearance.configureWithOpaqueBackground()
-            appearance.backgroundColor = UIColor(TerminalColors.background)
-            
-            appearance.stackedLayoutAppearance.normal.iconColor = UIColor(TerminalColors.textSecondary)
-            appearance.stackedLayoutAppearance.normal.titleTextAttributes = [.foregroundColor: UIColor(TerminalColors.textSecondary)]
-            appearance.stackedLayoutAppearance.selected.iconColor = UIColor(TerminalColors.primary)
-            appearance.stackedLayoutAppearance.selected.titleTextAttributes = [.foregroundColor: UIColor(TerminalColors.primary)]
-            
-            UITabBar.appearance().standardAppearance = appearance
-            UITabBar.appearance().scrollEdgeAppearance = appearance
-        }
     }
 }

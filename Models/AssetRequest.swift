@@ -24,6 +24,35 @@ struct AssetRequest: Identifiable, Codable, Equatable {
         case createdAt = "created_at"
     }
     
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        userId = try container.decode(String.self, forKey: .userId)
+        ticker = try container.decode(String.self, forKey: .ticker)
+        category = try container.decode(AssetCategory.self, forKey: .category)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        status = try container.decode(RequestStatus.self, forKey: .status)
+        
+        // Try ISO8601 first, then fall back to other formats
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        // Decode date as string first, then convert
+        let createdAtString = try container.decode(String.self, forKey: .createdAt)
+        
+        if let createdDate = dateFormatter.date(from: createdAtString) {
+            createdAt = createdDate
+        } else {
+            // Try without fractional seconds
+            dateFormatter.formatOptions = [.withInternetDateTime]
+            if let createdDate = dateFormatter.date(from: createdAtString) {
+                createdAt = createdDate
+            } else {
+                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(createdAtString)")
+            }
+        }
+    }
+    
     enum AssetCategory: String, Codable, CaseIterable {
         case stock = "stock"
         case stocks = "stocks"
@@ -75,14 +104,6 @@ struct AssetRequest: Identifiable, Codable, Equatable {
     }
     
     var formattedTimestamp: String {
-        return createdAt.timeAgoDisplay
-       
-        var timeAgoDisplay: String {
-            return createdAt.timeAgoDisplay
-        }
-    
-    }
-    var timeAgoDisplay: String {
         return createdAt.timeAgoDisplay
     }
 }

@@ -57,8 +57,38 @@ struct User: Identifiable, Codable {
         email = try container.decode(String.self, forKey: .email)
         isAdmin = try container.decode(Bool.self, forKey: .isAdmin)
         isVerified = try container.decode(Bool.self, forKey: .isVerified)
-        createdAt = try container.decode(Date.self, forKey: .createdAt)
-        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+        
+        // Try ISO8601 first, then fall back to other formats
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        
+        // Decode dates as strings first, then convert
+        let createdAtString = try container.decode(String.self, forKey: .createdAt)
+        let updatedAtString = try container.decode(String.self, forKey: .updatedAt)
+        
+        if let createdDate = dateFormatter.date(from: createdAtString) {
+            createdAt = createdDate
+        } else {
+            // Try without fractional seconds
+            dateFormatter.formatOptions = [.withInternetDateTime]
+            if let createdDate = dateFormatter.date(from: createdAtString) {
+                createdAt = createdDate
+            } else {
+                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(createdAtString)")
+            }
+        }
+        
+        if let updatedDate = dateFormatter.date(from: updatedAtString) {
+            updatedAt = updatedDate
+        } else {
+            // Try without fractional seconds
+            dateFormatter.formatOptions = [.withInternetDateTime]
+            if let updatedDate = dateFormatter.date(from: updatedAtString) {
+                updatedAt = updatedDate
+            } else {
+                throw DecodingError.dataCorruptedError(forKey: .updatedAt, in: container, debugDescription: "Invalid date format: \(updatedAtString)")
+            }
+        }
     }
 }
 
