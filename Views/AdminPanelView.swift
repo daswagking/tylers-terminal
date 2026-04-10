@@ -75,7 +75,7 @@ struct AdminPanelView: View {
                         .font(TerminalFonts.header3)
                         .foregroundColor(TerminalColors.primary)
                     
-                    Text(authViewModel.currentUser?.terminalId ?? "")
+                    Text(authViewModel.currentUser?.displayTerminalId ?? "")
                         .font(TerminalFonts.caption2)
                         .foregroundColor(TerminalColors.textSecondary)
                 }
@@ -373,7 +373,7 @@ struct AdminUserRow: View {
                     
                     Spacer()
                     
-                    Text(user.terminalId)
+                    Text(user.displayTerminalId)
                         .font(TerminalFonts.caption2)
                         .foregroundColor(TerminalColors.textSecondary)
                 }
