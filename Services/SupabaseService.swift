@@ -52,6 +52,7 @@ class SupabaseService {
     private var sessionToken: String?
     private var isAdminUser: Bool = false
     private var currentUsername: String = ""
+    private var currentUserId: String = ""
     
     private init() {}
     
@@ -109,6 +110,7 @@ class SupabaseService {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
             currentUsername = username
+            currentUserId = authResponse.user.id
             return User(id: authResponse.user.id, username: username, email: email)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "Signup failed")
@@ -121,6 +123,7 @@ class SupabaseService {
             isAdminUser = true
             sessionToken = "admin_bypass_token"
             currentUsername = "admin"
+            currentUserId = "admin-user-id"
             print("🔓 Admin bypass activated - will use service role key")
             return User(id: "admin-user-id", username: "admin", email: "admin@tylersterminal.local", isAdmin: true)
         }
@@ -156,6 +159,7 @@ class SupabaseService {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
             currentUsername = username
+            currentUserId = authResponse.user.id
             let email = "\(username.lowercased())@tylersterminal.local"
             return User(id: authResponse.user.id, username: username, email: email)
         } else {
@@ -168,6 +172,7 @@ class SupabaseService {
         sessionToken = nil
         isAdminUser = false
         currentUsername = ""
+        currentUserId = ""
         print("👋 Signed out - cleared admin status")
     }
     
@@ -611,7 +616,17 @@ class SupabaseService {
     
     // MARK: - Helper Methods
     private func getCurrentUserId() -> String? {
-        // Extract user ID from JWT token
+        // For admin users, return the hardcoded admin ID
+        if isAdminUser {
+            return "admin-user-id"
+        }
+        
+        // For regular users, return the stored user ID
+        if !currentUserId.isEmpty {
+            return currentUserId
+        }
+        
+        // Fallback: extract user ID from JWT token
         guard let token = sessionToken else { return nil }
         let parts = token.split(separator: ".")
         guard parts.count == 3 else { return nil }
