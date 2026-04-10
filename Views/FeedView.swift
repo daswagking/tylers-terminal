@@ -366,25 +366,38 @@ struct PostCardView: View {
         VStack(alignment: .leading, spacing: 8) {
             // Show ticker if present
             if let ticker = post.ticker {
-                Text(ticker.uppercased())
-                    .font(TerminalFonts.tickerSmall)
-                    .foregroundColor(TerminalColors.primary)
+                HStack {
+                    Text("$")
+                        .font(TerminalFonts.caption2.weight(.bold))
+                        .foregroundColor(TerminalColors.primary)
+                    Text(ticker.uppercased())
+                        .font(TerminalFonts.caption2.weight(.bold))
+                        .foregroundColor(TerminalColors.primary)
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(TerminalColors.primary.opacity(0.15))
+                .cornerRadius(12)
             }
             
             // Description with line limit
             Text(post.description)
-                .font(TerminalFonts.bodySmall)
+                .font(TerminalFonts.caption)
                 .foregroundColor(TerminalColors.textPrimary)
                 .lineLimit(isExpanded ? nil : maxLines)
             
             // "See more..." button if text is long
-            if post.description.count > 100 {
+            if post.description.count > 120 {
                 Button(action: {
-                    isExpanded.toggle()
+                    onTap() // Go to detail view instead of expanding
                 }) {
-                    Text(isExpanded ? "SHOW LESS" : "SEE MORE...")
-                        .font(TerminalFonts.caption2.weight(.bold))
-                        .foregroundColor(TerminalColors.primary)
+                    HStack(spacing: 4) {
+                        Text("READ MORE")
+                            .font(TerminalFonts.caption2.weight(.bold))
+                        Image(systemName: "arrow.right")
+                            .font(.caption2)
+                    }
+                    .foregroundColor(TerminalColors.primary)
                 }
             }
         }
@@ -483,7 +496,7 @@ struct CommentsView: View {
                         Section(header: Text("ORIGINAL POST").font(TerminalFonts.caption)) {
                             HStack {
                                 Text(post.description)
-                                    .font(TerminalFonts.bodySmall)
+                                    .font(TerminalFonts.caption)
                                     .foregroundColor(TerminalColors.textPrimary)
                             }
                             .listRowBackground(TerminalColors.backgroundSecondary)
@@ -592,7 +605,7 @@ struct CommentRow: View {
             }
             
             Text(comment.content)
-                .font(TerminalFonts.bodySmall)
+                .font(TerminalFonts.caption)
                 .foregroundColor(TerminalColors.textPrimary)
         }
         .padding(.vertical, 8)
