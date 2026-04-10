@@ -10,6 +10,7 @@ import Combine
 
 @MainActor
 class ProfileViewModel: ObservableObject {
+
     
     // MARK: - Published Properties
     @Published var user: User?
