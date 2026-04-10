@@ -378,7 +378,7 @@ struct AdminUserRow: View {
                         .foregroundColor(TerminalColors.textSecondary)
                 }
                 
-                Text("Joined: \(user.formattedDate)")
+                Text("Joined: \(user.formattedJoinDate)")
                     .font(TerminalFonts.caption2)
                     .foregroundColor(TerminalColors.textSecondary)
             }
