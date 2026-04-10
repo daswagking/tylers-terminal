@@ -74,10 +74,10 @@ struct UserReactions: Codable {
     let hasHeart: Bool
 }
 
-enum ReactionType: String, CaseIterable {
-    case fire = "fire"
-    case hundred = "hundred"
-    case heart = "heart"
+enum ReactionType: String, CaseIterable, Codable {
+    case fire = "FIRE"
+    case hundred = "HUNDRED"
+    case heart = "HEART"
     
     var emoji: String {
         switch self {
@@ -85,5 +85,21 @@ enum ReactionType: String, CaseIterable {
         case .hundred: return "💯"
         case .heart: return "❤️"
         }
+    }
+}
+
+struct Reaction: Identifiable, Codable {
+    let id: String
+    let postId: String
+    let userId: String
+    let type: ReactionType
+    let createdAt: Date
+    
+    enum CodingKeys: String, CodingKey {
+        case id
+        case postId = "post_id"
+        case userId = "user_id"
+        case type
+        case createdAt = "created_at"
     }
 }

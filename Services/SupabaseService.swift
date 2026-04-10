@@ -107,7 +107,8 @@ class SupabaseService {
         if httpResponse.statusCode == 200 || httpResponse.statusCode == 201 {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
-            return User(id: authResponse.user.id, username: username)
+            let email = "\(username.lowercased())@tylersterminal.local"
+            return User(id: authResponse.user.id, username: username, email: email)
         } else {
             throw SupabaseError.serverError(httpResponse.statusCode, "Signup failed")
         }
@@ -119,7 +120,7 @@ class SupabaseService {
             isAdminUser = true
             sessionToken = "admin_bypass_token"
             print("🔓 Admin bypass activated - will use service role key")
-            return User(id: "admin-user-id", username: "admin", isAdmin: true)
+            return User(id: "admin-user-id", username: "admin", email: "admin@tylersterminal.local", isAdmin: true)
         }
         
         // Regular user - reset admin flag
@@ -152,7 +153,8 @@ class SupabaseService {
         if httpResponse.statusCode == 200 {
             let authResponse = try JSONDecoder().decode(AuthResponse.self, from: data)
             sessionToken = authResponse.accessToken
-            return User(id: authResponse.user.id, username: username)
+            let email = "\(username.lowercased())@tylersterminal.local"
+            return User(id: authResponse.user.id, username: username, email: email)
         } else {
             throw SupabaseError.authenticationFailed
         }
