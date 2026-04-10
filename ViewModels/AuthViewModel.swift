@@ -2,9 +2,19 @@
 //  AuthViewModel.swift
 //  TYLER'S TERMINAL
 //
+//  Authentication state management
+//
 
 import SwiftUI
 import Combine
+
+// MARK: - Auth State Enum
+enum AuthState {
+    case unauthenticated
+    case authenticating
+    case authenticated(User)
+    case error(String)
+}
 
 @MainActor
 class AuthViewModel: ObservableObject {
@@ -67,10 +77,11 @@ class AuthViewModel: ObservableObject {
     private func checkSession() {
         if let savedUsername = UserDefaults.standard.string(forKey: "savedUsername"),
            let savedUserId = UserDefaults.standard.string(forKey: "savedUserId") {
+            let email = "\(savedUsername.lowercased())@tylersterminal.local"
             let user = User(
                 id: savedUserId,
                 username: savedUsername,
-                pushNotificationsEnabled: UserDefaults.standard.bool(forKey: "pushNotificationsEnabled")
+                email: email
             )
             state = .authenticated(user)
         }
@@ -91,11 +102,9 @@ class AuthViewModel: ObservableObject {
                 username: username.trimmingCharacters(in: .whitespaces),
                 password: password
             )
-            
             saveSession(user: user)
             state = .authenticated(user)
             clearFields()
-            
         } catch let error as SupabaseError {
             state = .error(error.localizedDescription)
             errorMessage = error.localizedDescription
@@ -109,7 +118,7 @@ class AuthViewModel: ObservableObject {
     
     func signUp() async {
         guard canSignUp else {
-            errorMessage = validationError
+            errorMessage = validationError ?? "INVALID INPUT"
             return
         }
         
@@ -119,14 +128,12 @@ class AuthViewModel: ObservableObject {
         
         do {
             let user = try await SupabaseService.shared.signUp(
-                username: username.trimmingCharacters(in: .whitespaces).lowercased(),
+                username: username.trimmingCharacters(in: .whitespaces),
                 password: password
             )
-            
             saveSession(user: user)
             state = .authenticated(user)
             clearFields()
-            
         } catch let error as SupabaseError {
             state = .error(error.localizedDescription)
             errorMessage = error.localizedDescription
@@ -138,50 +145,22 @@ class AuthViewModel: ObservableObject {
         isLoading = false
     }
     
-    func signOut() async {
-        isLoading = true
-        
-        do {
-            try await SupabaseService.shared.signOut()
-            clearSession()
-            state = .unauthenticated
-        } catch {
-            errorMessage = "SIGN OUT FAILED"
-        }
-        
-        isLoading = false
-    }
-    
-    func changePassword(currentPassword: String, newPassword: String) async -> Bool {
-        guard newPassword.count >= 6 else {
-            errorMessage = "PASSWORD MIN 6 CHARS"
-            return false
-        }
-        
-        isLoading = true
-        isLoading = false
-        return true
+    func signOut() {
+        UserDefaults.standard.removeObject(forKey: "savedUsername")
+        UserDefaults.standard.removeObject(forKey: "savedUserId")
+        state = .unauthenticated
+        clearFields()
     }
     
     private func saveSession(user: User) {
         UserDefaults.standard.set(user.username, forKey: "savedUsername")
         UserDefaults.standard.set(user.id, forKey: "savedUserId")
-        UserDefaults.standard.set(user.pushNotificationsEnabled, forKey: "pushNotificationsEnabled")
-    }
-    
-    private func clearSession() {
-        UserDefaults.standard.removeObject(forKey: "savedUsername")
-        UserDefaults.standard.removeObject(forKey: "savedUserId")
-        username = ""
-        password = ""
-        confirmPassword = ""
     }
     
     private func clearFields() {
         username = ""
         password = ""
         confirmPassword = ""
-        errorMessage = nil
     }
     
     func clearError() {
