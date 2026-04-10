@@ -708,28 +708,4 @@ struct AdminThreadRow: View {
     }
 }
 
-// MARK: - Comment Row
-struct CommentRow: View {
-    let comment: Comment
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(comment.authorUsername.uppercased())
-                    .font(TerminalFonts.caption.weight(.bold))
-                    .foregroundColor(TerminalColors.primary)
-                
-                Spacer()
-                
-                Text(comment.formattedTimestamp)
-                    .font(TerminalFonts.caption2)
-                    .foregroundColor(TerminalColors.textSecondary)
-            }
-            
-            Text(comment.content)
-                .font(TerminalFonts.body)
-                .foregroundColor(TerminalColors.textPrimary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-    }
-}
+// Note: CommentRow is defined in FeedView.swift
