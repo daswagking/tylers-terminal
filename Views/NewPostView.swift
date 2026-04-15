@@ -402,18 +402,22 @@ struct NewPostView: View {
                    let imageData = image.jpegData(compressionQuality: 0.8) {
                     // Upload image to Supabase Storage
                     let filename = "\(UUID().uuidString).jpg"
-                    imageUrl = try await SupabaseService.shared.uploadImage(imageData, filename: filename)
+                    imageUrl = try await SupabaseService.shared.uploadImage(data: imageData, filename: filename)
                 } else {
                     // No image - use placeholder
                     imageUrl = "https://via.placeholder.com/400x300/1a1a1a/00ff00?text=NO+IMAGE"
                 }
                 
+                // Get author username from current user
+                let authorUsername = authViewModel.currentUser?.username ?? "anonymous"
+                
                 // Create the post with the image URL
                 try await SupabaseService.shared.createPost(
-                    imageUrl: imageUrl,
                     description: description,
+                    imageUrl: imageUrl,
                     ticker: ticker.isEmpty ? nil : ticker.uppercased(),
-                    category: selectedCategory
+                    category: selectedCategory,
+                    authorUsername: authorUsername
                 )
                 
                 await MainActor.run {
