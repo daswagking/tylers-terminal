@@ -37,6 +37,16 @@ enum SupabaseError: Error, LocalizedError {
     }
 }
 
+// MARK: - User Response (for decoding from Supabase)
+struct UserResponse: Codable {
+    let id: String
+    let username: String
+    let email: String
+    let password_hash: String?
+    let is_admin: Bool?
+    let is_verified: Bool?
+}
+
 // MARK: - Supabase Service
 class SupabaseService {
     static let shared = SupabaseService()
@@ -90,13 +100,19 @@ class SupabaseService {
         return headers
     }
     
+    // Simple password hash (for demo purposes - use proper hashing in production)
+    private func hashPassword(_ password: String) -> String {
+        // Simple hash - in production use bcrypt or Argon2
+        let data = Data(password.utf8)
+        return data.base64EncodedString()
+    }
+    
     // MARK: - Sign In / Sign Up
     
     func signIn(username: String, password: String) async throws -> User {
         print("🔐 [SupabaseService] Signing in user: \(username)")
         
-        // For now, use a simple lookup by username
-        // In production, you'd use Supabase Auth with proper password hashing
+        // Fetch user with password hash
         let url = URL(string: "\(baseURL)/rest/v1/profiles?username=eq.\(username)&select=*")!
         print("🌐 [SupabaseService] URL: \(url)")
         
@@ -116,13 +132,33 @@ class SupabaseService {
         }
         
         do {
-            let users = try JSONDecoder().decode([User].self, from: data)
-            guard let user = users.first else {
+            let users = try JSONDecoder().decode([UserResponse].self, from: data)
+            guard let userResponse = users.first else {
                 print("❌ [SupabaseService] User not found")
                 throw SupabaseError.invalidCredentials
             }
+            
+            // Verify password
+            let hashedInput = hashPassword(password)
+            if let storedHash = userResponse.password_hash, !storedHash.isEmpty {
+                guard storedHash == hashedInput else {
+                    print("❌ [SupabaseService] Invalid password")
+                    throw SupabaseError.invalidCredentials
+                }
+            } else {
+                // No password set - for development, accept any password
+                print("⚠️ [SupabaseService] No password hash stored, accepting login")
+            }
+            
+            let user = User(
+                id: userResponse.id,
+                username: userResponse.username,
+                email: userResponse.email
+            )
             print("✅ [SupabaseService] User signed in: \(user.username)")
             return user
+        } catch let error as SupabaseError {
+            throw error
         } catch {
             print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
@@ -148,9 +184,10 @@ class SupabaseService {
             }
         }
         
-        // Create new user
+        // Create new user with password hash
         let userId = UUID().uuidString
         let email = "\(username.lowercased())@tylersterminal.local"
+        let passwordHash = hashPassword(password)
         
         let url = URL(string: "\(baseURL)/rest/v1/profiles")!
         print("🌐 [SupabaseService] URL: \(url)")
@@ -159,6 +196,7 @@ class SupabaseService {
             "id": userId,
             "username": username,
             "email": email,
+            "password_hash": passwordHash,
             "is_admin": false,
             "is_verified": false,
             "created_at": ISO8601DateFormatter().string(from: Date()),
