@@ -188,6 +188,39 @@ class SupabaseService {
         return user
     }
     
+    // MARK: - Push Notifications
+    
+    func updatePushNotifications(enabled: Bool) async throws {
+        print("🔔 [SupabaseService] Updating push notifications: \(enabled)")
+        
+        let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(adminUserId)")!
+        print("🌐 [SupabaseService] URL: \(url)")
+        
+        let updateData: [String: Any] = [
+            "push_notifications_enabled": enabled,
+            "updated_at": ISO8601DateFormatter().string(from: Date())
+        ]
+        
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
+        
+        print("📤 [SupabaseService] Sending PATCH request...")
+        let (data, response) = try await URLSession.shared.data(for: request)
+        
+        if let httpResponse = response as? HTTPURLResponse {
+            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
+            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+                let errorString = String(data: data, encoding: .utf8) ?? "nil"
+                print("❌ [SupabaseService] Error response: \(errorString)")
+                throw SupabaseError.serverError("Failed to update push notifications: \(errorString)")
+            }
+        }
+        
+        print("✅ [SupabaseService] Push notifications updated")
+    }
+    
     // MARK: - Posts
     
     func fetchPosts(limit: Int = 20, offset: Int = 0) async throws -> [Post] {
@@ -855,7 +888,7 @@ class SupabaseService {
     
     // MARK: - Admin Functions
     
-    func getAllUsers() async throws -> [User] {
+    func fetchAllUsers() async throws -> [User] {
         print("👥 [SupabaseService] Fetching all users...")
         let url = URL(string: "\(baseURL)/rest/v1/profiles?select=*")!
         print("🌐 [SupabaseService] URL: \(url)")
