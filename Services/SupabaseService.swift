@@ -16,28 +16,21 @@ enum SupabaseError: Error, LocalizedError {
     case unauthorized
     case unknown
     case invalidCredentials
-    
+
     var errorDescription: String? {
         switch self {
-        case .networkError:
-            return "Network connection failed"
-        case .decodingError:
-            return "Failed to parse data"
-        case .serverError(let message):
-            return message
-        case .notFound:
-            return "Resource not found"
-        case .unauthorized:
-            return "Unauthorized access"
-        case .unknown:
-            return "Unknown error occurred"
-        case .invalidCredentials:
-            return "Invalid username or password"
+        case .networkError: return "Network connection failed"
+        case .decodingError: return "Failed to parse data"
+        case .serverError(let message): return message
+        case .notFound: return "Resource not found"
+        case .unauthorized: return "Unauthorized access"
+        case .unknown: return "Unknown error occurred"
+        case .invalidCredentials: return "Invalid username or password"
         }
     }
 }
 
-// MARK: - User Response (for decoding from Supabase)
+// MARK: - User Response (for decoding from Supabase profiles table)
 struct UserResponse: Codable {
     let id: String
     let username: String
@@ -45,322 +38,269 @@ struct UserResponse: Codable {
     let password_hash: String?
     let is_admin: Bool?
     let is_verified: Bool?
+    let created_at: String?
+    let updated_at: String?
 }
 
 // MARK: - Supabase Service
 class SupabaseService {
     static let shared = SupabaseService()
-    
+
     private let baseURL: String
     private let anonKey: String
     private let serviceRoleKey: String
-    private var authToken: String?
-    
-    // Admin user ID - using valid UUID format for database compatibility
-    private let adminUserId = "00000000-0000-0000-0000-000000000001"
-    
+
+    // Currently logged-in user context
+    private(set) var currentUserId: String?
+    private(set) var currentUsername: String?
+
     private init() {
-        print("🔧 [SupabaseService] Initializing...")
         self.baseURL = SupabaseConfig.projectURL
         self.anonKey = SupabaseConfig.anonKey
         self.serviceRoleKey = SupabaseConfig.serviceRoleKey
-        print("✅ [SupabaseService] Initialized with baseURL: \(baseURL)")
     }
-    
-    // MARK: - Authentication
-    
-    func setAuthToken(_ token: String) {
-        print("🔐 [SupabaseService] Setting auth token")
-        self.authToken = token
+
+    // MARK: - Current User Context
+
+    func setCurrentUser(id: String, username: String) {
+        currentUserId = id
+        currentUsername = username
     }
-    
-    func clearAuthToken() {
-        print("🚫 [SupabaseService] Clearing auth token")
-        self.authToken = nil
+
+    func clearCurrentUser() {
+        currentUserId = nil
+        currentUsername = nil
     }
-    
-    private func getHeaders(useServiceRole: Bool = false) -> [String: String] {
-        print("📋 [SupabaseService] Building headers, useServiceRole: \(useServiceRole)")
-        var headers = [
+
+    // MARK: - Headers
+
+    private func getHeaders() -> [String: String] {
+        return [
             "Content-Type": "application/json",
-            "apikey": useServiceRole ? serviceRoleKey : anonKey
+            "apikey": serviceRoleKey,
+            "Authorization": "Bearer \(serviceRoleKey)",
+            "Prefer": "return=representation"
         ]
-        
-        if useServiceRole {
-            print("🔑 [SupabaseService] Using service role key")
-            headers["Authorization"] = "Bearer \(serviceRoleKey)"
-        } else if let token = authToken {
-            print("🔑 [SupabaseService] Using auth token")
-            headers["Authorization"] = "Bearer \(token)"
-        } else {
-            print("🔑 [SupabaseService] Using anon key for Authorization")
-            headers["Authorization"] = "Bearer \(anonKey)"
-        }
-        
-        return headers
     }
-    
-    // Simple password hash (for demo purposes - use proper hashing in production)
+
+    private func getDeleteHeaders() -> [String: String] {
+        return [
+            "Content-Type": "application/json",
+            "apikey": serviceRoleKey,
+            "Authorization": "Bearer \(serviceRoleKey)"
+        ]
+    }
+
+    // MARK: - Password Hashing (base64 for demo)
     private func hashPassword(_ password: String) -> String {
-        // Simple hash - in production use bcrypt or Argon2
         let data = Data(password.utf8)
         return data.base64EncodedString()
     }
-    
+
+    // MARK: - URL Encoding Helper
+    private func urlEncoded(_ string: String) -> String {
+        return string.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? string
+    }
+
     // MARK: - Sign In / Sign Up
-    
+
     func signIn(username: String, password: String) async throws -> User {
-        print("🔐 [SupabaseService] Signing in user: \(username)")
-        
-        // Fetch user with password hash
-        let url = URL(string: "\(baseURL)/rest/v1/profiles?username=eq.\(username)&select=*")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        let encodedUsername = urlEncoded(username)
+        guard let url = URL(string: "\(baseURL)/rest/v1/profiles?username=eq.\(encodedUsername)&select=*") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.invalidCredentials
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.invalidCredentials
         }
-        
+
         do {
             let users = try JSONDecoder().decode([UserResponse].self, from: data)
             guard let userResponse = users.first else {
-                print("❌ [SupabaseService] User not found")
                 throw SupabaseError.invalidCredentials
             }
-            
-            // Verify password
+
             let hashedInput = hashPassword(password)
             if let storedHash = userResponse.password_hash, !storedHash.isEmpty {
                 guard storedHash == hashedInput else {
-                    print("❌ [SupabaseService] Invalid password")
                     throw SupabaseError.invalidCredentials
                 }
-            } else {
-                // No password set - for development, accept any password
-                print("⚠️ [SupabaseService] No password hash stored, accepting login")
             }
-            
+
             let user = User(
                 id: userResponse.id,
                 username: userResponse.username,
-                email: userResponse.email
+                email: userResponse.email,
+                isAdmin: userResponse.is_admin ?? false,
+                isVerified: userResponse.is_verified ?? false
             )
-            print("✅ [SupabaseService] User signed in: \(user.username)")
+            setCurrentUser(id: user.id, username: user.username)
             return user
         } catch let error as SupabaseError {
             throw error
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func signUp(username: String, password: String) async throws -> User {
-        print("🔐 [SupabaseService] Signing up user: \(username)")
-        
-        // Check if username already exists
-        let checkUrl = URL(string: "\(baseURL)/rest/v1/profiles?username=eq.\(username)&select=id")!
+        let encodedUsername = urlEncoded(username)
+        guard let checkUrl = URL(string: "\(baseURL)/rest/v1/profiles?username=eq.\(encodedUsername)&select=id") else {
+            throw SupabaseError.networkError
+        }
+
         var checkRequest = URLRequest(url: checkUrl)
         checkRequest.httpMethod = "GET"
-        checkRequest.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        let (checkData, checkResponse) = try await URLSession.shared.data(for: checkRequest)
-        
-        if let httpResponse = checkResponse as? HTTPURLResponse, httpResponse.statusCode == 200 {
-            if let existingUsers = try? JSONDecoder().decode([[String: String]].self, from: checkData),
-               !existingUsers.isEmpty {
-                print("❌ [SupabaseService] Username already exists")
-                throw SupabaseError.serverError("Username already exists")
-            }
+        checkRequest.allHTTPHeaderFields = getHeaders()
+
+        let (checkData, _) = try await URLSession.shared.data(for: checkRequest)
+
+        if let existingUsers = try? JSONDecoder().decode([[String: String]].self, from: checkData),
+           !existingUsers.isEmpty {
+            throw SupabaseError.serverError("Username already exists")
         }
-        
-        // Create new user with password hash
+
         let userId = UUID().uuidString
         let email = "\(username.lowercased())@tylersterminal.local"
         let passwordHash = hashPassword(password)
-        
-        let url = URL(string: "\(baseURL)/rest/v1/profiles")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+
+        guard let url = URL(string: "\(baseURL)/rest/v1/profiles") else {
+            throw SupabaseError.networkError
+        }
+
         let userData: [String: Any] = [
             "id": userId,
             "username": username,
             "email": email,
             "password_hash": passwordHash,
             "is_admin": false,
-            "is_verified": false,
-            "created_at": ISO8601DateFormatter().string(from: Date()),
-            "updated_at": ISO8601DateFormatter().string(from: Date())
+            "is_verified": false
         ]
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: userData)
-        
-        print("📤 [SupabaseService] Sending POST request...")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 201 {
-                let errorString = String(data: data, encoding: .utf8) ?? "nil"
-                print("❌ [SupabaseService] Error response: \(errorString)")
-                throw SupabaseError.serverError("Failed to create user: \(errorString)")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 201 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to create user: \(errorString)")
         }
-        
-        // Return the created user
+
         let user = User(id: userId, username: username, email: email)
-        print("✅ [SupabaseService] User signed up: \(user.username)")
+        setCurrentUser(id: user.id, username: user.username)
         return user
     }
-    
+
+    func signOut() {
+        clearCurrentUser()
+    }
+
     // MARK: - Push Notifications
-    
+
     func updatePushNotifications(enabled: Bool) async throws {
-        print("🔔 [SupabaseService] Updating push notifications: \(enabled)")
-        
-        let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(adminUserId)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
-        let updateData: [String: Any] = [
-            "push_notifications_enabled": enabled,
-            "updated_at": ISO8601DateFormatter().string(from: Date())
-        ]
-        
+        guard let userId = currentUserId else { throw SupabaseError.unauthorized }
+        guard let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(userId)") else {
+            throw SupabaseError.networkError
+        }
+
+        let updateData: [String: Any] = ["push_notifications_enabled": enabled]
+
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getDeleteHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
-        
-        print("📤 [SupabaseService] Sending PATCH request...")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
-                let errorString = String(data: data, encoding: .utf8) ?? "nil"
-                print("❌ [SupabaseService] Error response: \(errorString)")
-                throw SupabaseError.serverError("Failed to update push notifications: \(errorString)")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to update push notifications: \(errorString)")
         }
-        
-        print("✅ [SupabaseService] Push notifications updated")
     }
-    
+
     // MARK: - Posts
-    
+
     func fetchPosts(limit: Int = 20, offset: Int = 0) async throws -> [Post] {
-        print("📥 [SupabaseService] Fetching posts... limit: \(limit), offset: \(offset)")
-        let url = URL(string: "\(baseURL)/rest/v1/posts?select=*&order=created_at.desc&limit=\(limit)&offset=\(offset)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts?select=*&order=created_at.desc&limit=\(limit)&offset=\(offset)") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch posts")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch posts")
         }
-        
+
         do {
-            let posts = try JSONDecoder().decode([Post].self, from: data)
-            print("✅ [SupabaseService] Fetched \(posts.count) posts")
-            return posts
+            return try JSONDecoder().decode([Post].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
+            print("[SupabaseService] Post decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func fetchAllPosts() async throws -> [Post] {
-        print("📥 [SupabaseService] Fetching all posts...")
-        let url = URL(string: "\(baseURL)/rest/v1/posts?select=*&order=created_at.desc")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts?select=*&order=created_at.desc") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch posts")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch posts")
         }
-        
+
         do {
-            let posts = try JSONDecoder().decode([Post].self, from: data)
-            print("✅ [SupabaseService] Fetched \(posts.count) posts")
-            return posts
+            return try JSONDecoder().decode([Post].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func fetchPost(id: String) async throws -> Post {
-        print("📥 [SupabaseService] Fetching post with id: \(id)")
-        let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(id)&select=*")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(id)&select=*") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch post")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch post")
         }
-        
+
         let posts = try JSONDecoder().decode([Post].self, from: data)
-        guard let post = posts.first else {
-            print("❌ [SupabaseService] Post not found")
-            throw SupabaseError.notFound
-        }
-        print("✅ [SupabaseService] Fetched post by: \(post.authorUsername)")
+        guard let post = posts.first else { throw SupabaseError.notFound }
         return post
     }
-    
+
     func createPost(description: String, imageUrl: String, ticker: String? = nil, category: Post.PostCategory = .trade, authorUsername: String) async throws -> Post {
-        print("📝 [SupabaseService] Creating post...")
-        print("📝 [SupabaseService] Description: \(description)")
-        print("📝 [SupabaseService] Image URL: \(imageUrl)")
-        print("📝 [SupabaseService] Ticker: \(ticker ?? "nil")")
-        print("📝 [SupabaseService] Category: \(category)")
-        print("📝 [SupabaseService] Author: \(authorUsername)")
-        
-        let url = URL(string: "\(baseURL)/rest/v1/posts")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
-        let postData: [String: Any] = [
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts") else {
+            throw SupabaseError.networkError
+        }
+
+        var postData: [String: Any] = [
             "author_username": authorUsername,
             "image_url": imageUrl,
             "description": description,
@@ -370,281 +310,220 @@ class SupabaseService {
             "hundred_count": 0,
             "heart_count": 0,
             "comment_count": 0,
-            "is_verified": false,
-            "created_at": ISO8601DateFormatter().string(from: Date())
+            "is_verified": false
         ]
-        
+
+        if let userId = currentUserId {
+            postData["author_id"] = userId
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: postData)
-        
-        print("📤 [SupabaseService] Sending POST request...")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 201 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to create post")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 201 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to create post: \(errorString)")
         }
-        
+
         let posts = try JSONDecoder().decode([Post].self, from: data)
-        guard let post = posts.first else {
-            print("❌ [SupabaseService] No post returned")
-            throw SupabaseError.unknown
-        }
-        print("✅ [SupabaseService] Created post with id: \(post.id)")
+        guard let post = posts.first else { throw SupabaseError.unknown }
         return post
     }
-    
+
     func deletePost(postId: String) async throws {
-        print("🗑️ [SupabaseService] Deleting post: \(postId)")
-        let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(postId)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(postId)") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending DELETE request...")
+        request.allHTTPHeaderFields = getDeleteHeaders()
+
         let (_, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
-                print("❌ [SupabaseService] Delete failed")
-                throw SupabaseError.serverError("Failed to delete post")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+            throw SupabaseError.serverError("Failed to delete post")
         }
-        print("✅ [SupabaseService] Post deleted successfully")
     }
-    
+
     // MARK: - Comments
-    
+
     func fetchComments(for postId: String) async throws -> [Comment] {
-        print("📥 [SupabaseService] Fetching comments for post: \(postId)")
-        let url = URL(string: "\(baseURL)/rest/v1/comments?post_id=eq.\(postId)&select=*&order=created_at.desc")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/comments?post_id=eq.\(postId)&select=*&order=created_at.asc") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch comments")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch comments")
         }
-        
+
         do {
-            let comments = try JSONDecoder().decode([Comment].self, from: data)
-            print("✅ [SupabaseService] Fetched \(comments.count) comments")
-            return comments
+            return try JSONDecoder().decode([Comment].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
+            print("[SupabaseService] Comment decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func addComment(postId: String, content: String) async throws {
-        print("💬 [SupabaseService] Creating comment...")
-        print("💬 [SupabaseService] Post ID: \(postId)")
-        print("💬 [SupabaseService] Content: \(content)")
-        
-        let url = URL(string: "\(baseURL)/rest/v1/comments")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
-        // Get current user info - for now using admin
-        let commentData: [String: Any] = [
+        guard let url = URL(string: "\(baseURL)/rest/v1/comments") else {
+            throw SupabaseError.networkError
+        }
+
+        let authorId = currentUserId ?? ""
+        let authorName = currentUsername ?? "anonymous"
+
+        var commentData: [String: Any] = [
             "post_id": postId,
-            "author_id": adminUserId,
-            "author_username": "admin",
-            "content": content,
-            "created_at": ISO8601DateFormatter().string(from: Date()),
-            "updated_at": ISO8601DateFormatter().string(from: Date())
+            "author_username": authorName,
+            "content": content
         ]
-        
+        if !authorId.isEmpty {
+            commentData["author_id"] = authorId
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getDeleteHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: commentData)
-        
-        print("📤 [SupabaseService] Sending POST request...")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 201 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to create comment")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 201 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to create comment: \(errorString)")
         }
-        
-        print("✅ [SupabaseService] Comment created successfully")
+
+        // Increment comment_count on the post
+        try await incrementCommentCount(postId: postId)
     }
-    
+
+    private func incrementCommentCount(postId: String) async throws {
+        let post = try await fetchPost(id: postId)
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(postId)") else { return }
+
+        let updateData: [String: Any] = ["comment_count": post.commentCount + 1]
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "PATCH"
+        request.allHTTPHeaderFields = getDeleteHeaders()
+        request.httpBody = try? JSONSerialization.data(withJSONObject: updateData)
+
+        _ = try? await URLSession.shared.data(for: request)
+    }
+
     func deleteComment(id: String) async throws {
-        print("🗑️ [SupabaseService] Deleting comment: \(id)")
-        let url = URL(string: "\(baseURL)/rest/v1/comments?id=eq.\(id)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/comments?id=eq.\(id)") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending DELETE request...")
+        request.allHTTPHeaderFields = getDeleteHeaders()
+
         let (_, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
-                print("❌ [SupabaseService] Delete failed")
-                throw SupabaseError.serverError("Failed to delete comment")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+            throw SupabaseError.serverError("Failed to delete comment")
         }
-        print("✅ [SupabaseService] Comment deleted successfully")
     }
-    
+
     // MARK: - Reactions
-    
+
     func fetchReactions(for postId: String) async throws -> [Reaction] {
-        print("❤️ [SupabaseService] Fetching reactions for post: \(postId)")
-        let url = URL(string: "\(baseURL)/rest/v1/reactions?post_id=eq.\(postId)&select=*")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/reactions?post_id=eq.\(postId)&select=*") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch reactions")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch reactions")
         }
-        
+
         do {
-            let reactions = try JSONDecoder().decode([Reaction].self, from: data)
-            print("✅ [SupabaseService] Fetched \(reactions.count) reactions")
-            for reaction in reactions {
-                print("   - \(reaction.type.emoji) by \(reaction.userId)")
-            }
-            return reactions
+            return try JSONDecoder().decode([Reaction].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func toggleReaction(postId: String, type: ReactionType) async throws {
-        print("🔄 [SupabaseService] Toggling reaction...")
-        print("🔄 [SupabaseService] Post ID: \(postId)")
-        print("🔄 [SupabaseService] Reaction Type: \(type)")
-        print("🔄 [SupabaseService] User ID: \(adminUserId)")
-        
-        // First, check if user already has this reaction
-        print("🔍 [SupabaseService] Checking existing reactions...")
+        guard let userId = currentUserId else { throw SupabaseError.unauthorized }
+
         let existingReactions = try await fetchReactions(for: postId)
-        print("🔍 [SupabaseService] Found \(existingReactions.count) total reactions")
-        
-        let userReaction = existingReactions.first { $0.userId == adminUserId && $0.type == type }
-        
+        let userReaction = existingReactions.first { $0.userId == userId && $0.type == type }
+
         if let existingReaction = userReaction {
-            // User already has this reaction, remove it
-            print("🗑️ [SupabaseService] Found existing reaction, removing: \(existingReaction.id)")
             try await deleteReaction(id: existingReaction.id)
-            // Decrement count on post
             try await updateReactionCount(postId: postId, type: type, increment: false)
-            print("✅ [SupabaseService] Reaction removed")
         } else {
-            // User doesn't have this reaction, add it
-            print("➕ [SupabaseService] No existing reaction found, adding new reaction")
-            try await addReaction(postId: postId, type: type)
-            // Increment count on post
+            try await addReaction(postId: postId, type: type, userId: userId)
             try await updateReactionCount(postId: postId, type: type, increment: true)
-            print("✅ [SupabaseService] Reaction added")
         }
     }
-    
-    private func addReaction(postId: String, type: ReactionType) async throws {
-        print("➕ [SupabaseService] Adding reaction...")
-        print("➕ [SupabaseService] Post ID: \(postId)")
-        print("➕ [SupabaseService] Type: \(type)")
-        print("➕ [SupabaseService] User ID: \(adminUserId)")
-        
-        let url = URL(string: "\(baseURL)/rest/v1/reactions")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+
+    private func addReaction(postId: String, type: ReactionType, userId: String) async throws {
+        guard let url = URL(string: "\(baseURL)/rest/v1/reactions") else {
+            throw SupabaseError.networkError
+        }
+
         let reactionData: [String: Any] = [
             "post_id": postId,
-            "user_id": adminUserId,
-            "type": type.rawValue,
-            "created_at": ISO8601DateFormatter().string(from: Date())
+            "user_id": userId,
+            "type": type.rawValue
         ]
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getDeleteHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: reactionData)
-        
-        print("📤 [SupabaseService] Sending POST request...")
-        print("📤 [SupabaseService] Request body: \(reactionData)")
-        
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 201 {
-                let errorString = String(data: data, encoding: .utf8) ?? "nil"
-                print("❌ [SupabaseService] Error response: \(errorString)")
-                throw SupabaseError.serverError("Failed to add reaction: \(errorString)")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 201 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to add reaction: \(errorString)")
         }
-        
-        print("✅ [SupabaseService] Reaction added successfully")
     }
-    
+
     private func deleteReaction(id: String) async throws {
-        print("🗑️ [SupabaseService] Deleting reaction: \(id)")
-        let url = URL(string: "\(baseURL)/rest/v1/reactions?id=eq.\(id)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/reactions?id=eq.\(id)") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "DELETE"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending DELETE request...")
+        request.allHTTPHeaderFields = getDeleteHeaders()
+
         let (_, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
-                print("❌ [SupabaseService] Delete failed")
-                throw SupabaseError.serverError("Failed to delete reaction")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+            throw SupabaseError.serverError("Failed to delete reaction")
         }
-        print("✅ [SupabaseService] Reaction deleted successfully")
     }
-    
+
     private func updateReactionCount(postId: String, type: ReactionType, increment: Bool) async throws {
-        print("📊 [SupabaseService] Updating reaction count for post: \(postId), type: \(type), increment: \(increment)")
-        
-        // First fetch the current post to get current counts
         let post = try await fetchPost(id: postId)
-        
+
         var updates: [String: Any] = [:]
-        
         switch type {
         case .fire:
             updates["fire_count"] = max(0, post.fireCount + (increment ? 1 : -1))
@@ -653,328 +532,208 @@ class SupabaseService {
         case .heart:
             updates["heart_count"] = max(0, post.heartCount + (increment ? 1 : -1))
         }
-        
-        let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(postId)")!
-        
+
+        guard let url = URL(string: "\(baseURL)/rest/v1/posts?id=eq.\(postId)") else { return }
+
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getDeleteHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: updates)
-        
+
         let (_, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
-                print("❌ [SupabaseService] Failed to update reaction count")
-                throw SupabaseError.serverError("Failed to update reaction count")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+            throw SupabaseError.serverError("Failed to update reaction count")
         }
-        
-        print("✅ [SupabaseService] Reaction count updated")
     }
-    
+
     // MARK: - Asset Requests
-    
+
     func submitAssetRequest(ticker: String, category: AssetRequest.AssetCategory, description: String?) async throws {
-        print("📊 [SupabaseService] Submitting asset request...")
-        print("📊 [SupabaseService] Ticker: \(ticker)")
-        print("📊 [SupabaseService] Category: \(category)")
-        print("📊 [SupabaseService] Description: \(description ?? "nil")")
-        
-        let url = URL(string: "\(baseURL)/rest/v1/asset_requests")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let userId = currentUserId else { throw SupabaseError.unauthorized }
+        guard let url = URL(string: "\(baseURL)/rest/v1/asset_requests") else {
+            throw SupabaseError.networkError
+        }
+
         let requestData: [String: Any] = [
-            "user_id": adminUserId,
+            "user_id": userId,
             "ticker": ticker.uppercased(),
             "category": category.rawValue,
             "description": description ?? "",
-            "status": "pending",
-            "created_at": ISO8601DateFormatter().string(from: Date())
+            "status": "pending"
         ]
-        
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getDeleteHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: requestData)
-        
-        print("📤 [SupabaseService] Sending POST request...")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 201 {
-                let errorString = String(data: data, encoding: .utf8) ?? "nil"
-                print("❌ [SupabaseService] Error response: \(errorString)")
-                throw SupabaseError.serverError("Failed to submit asset request: \(errorString)")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 201 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to submit asset request: \(errorString)")
         }
-        
-        print("✅ [SupabaseService] Asset request submitted successfully")
     }
-    
+
     func fetchUserRequests() async throws -> [AssetRequest] {
-        print("📊 [SupabaseService] Fetching user requests...")
-        let url = URL(string: "\(baseURL)/rest/v1/asset_requests?user_id=eq.\(adminUserId)&select=*&order=created_at.desc")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let userId = currentUserId else { return [] }
+        guard let url = URL(string: "\(baseURL)/rest/v1/asset_requests?user_id=eq.\(userId)&select=*&order=created_at.desc") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch user requests")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch user requests")
         }
-        
+
         do {
-            let requests = try JSONDecoder().decode([AssetRequest].self, from: data)
-            print("✅ [SupabaseService] Fetched \(requests.count) user requests")
-            return requests
+            return try JSONDecoder().decode([AssetRequest].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     // MARK: - Notifications
-    
+
     func fetchNotifications() async throws -> [AppNotification] {
-        print("🔔 [SupabaseService] Fetching notifications...")
-        let url = URL(string: "\(baseURL)/rest/v1/notifications?user_id=eq.\(adminUserId)&select=*&order=created_at.desc")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let userId = currentUserId else { return [] }
+        guard let url = URL(string: "\(baseURL)/rest/v1/notifications?user_id=eq.\(userId)&select=*&order=created_at.desc") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch notifications")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch notifications")
         }
-        
+
         do {
-            let notifications = try JSONDecoder().decode([AppNotification].self, from: data)
-            print("✅ [SupabaseService] Fetched \(notifications.count) notifications")
-            return notifications
+            return try JSONDecoder().decode([AppNotification].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
+            print("[SupabaseService] Notification decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func markNotificationAsRead(notificationId: String) async throws {
-        print("🔔 [SupabaseService] Marking notification as read: \(notificationId)")
-        let url = URL(string: "\(baseURL)/rest/v1/notifications?id=eq.\(notificationId)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
-        let updateData: [String: Any] = [
-            "is_read": true
-        ]
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/notifications?id=eq.\(notificationId)") else {
+            throw SupabaseError.networkError
+        }
+
+        let updateData: [String: Any] = ["is_read": true]
+
         var request = URLRequest(url: url)
         request.httpMethod = "PATCH"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
+        request.allHTTPHeaderFields = getDeleteHeaders()
         request.httpBody = try JSONSerialization.data(withJSONObject: updateData)
-        
-        print("📤 [SupabaseService] Sending PATCH request...")
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
-                let errorString = String(data: data, encoding: .utf8) ?? "nil"
-                print("❌ [SupabaseService] Error response: \(errorString)")
-                throw SupabaseError.serverError("Failed to mark notification as read: \(errorString)")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 204 {
+            let errorString = String(data: data, encoding: .utf8) ?? "unknown"
+            throw SupabaseError.serverError("Failed to mark notification as read: \(errorString)")
         }
-        
-        print("✅ [SupabaseService] Notification marked as read")
     }
-    
+
     // MARK: - Image Upload
-    
+
     func uploadImage(data: Data, filename: String, contentType: String = "image/jpeg") async throws -> String {
-        print("📤 [SupabaseService] Uploading image...")
-        print("📤 [SupabaseService] Filename: \(filename)")
-        print("📤 [SupabaseService] Content-Type: \(contentType)")
-        print("📤 [SupabaseService] Data size: \(data.count) bytes")
-        
         let bucketName = "post-images"
-        let url = URL(string: "\(baseURL)/storage/v1/object/\(bucketName)/\(filename)")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/storage/v1/object/\(bucketName)/\(filename)") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
         request.setValue(contentType, forHTTPHeaderField: "Content-Type")
-        request.setValue(anonKey, forHTTPHeaderField: "apikey")
+        request.setValue(serviceRoleKey, forHTTPHeaderField: "apikey")
         request.setValue("Bearer \(serviceRoleKey)", forHTTPHeaderField: "Authorization")
         request.httpBody = data
-        
-        print("📤 [SupabaseService] Sending upload request...")
+
         let (_, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
-                print("❌ [SupabaseService] Upload failed")
-                throw SupabaseError.serverError("Failed to upload image")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse,
+           httpResponse.statusCode != 200 && httpResponse.statusCode != 201 {
+            throw SupabaseError.serverError("Failed to upload image")
         }
-        
-        let imageUrl = "\(baseURL)/storage/v1/object/public/\(bucketName)/\(filename)"
-        print("✅ [SupabaseService] Image uploaded: \(imageUrl)")
-        return imageUrl
+
+        return "\(baseURL)/storage/v1/object/public/\(bucketName)/\(filename)"
     }
-    
+
     // MARK: - User Profile
-    
+
     func fetchUser(userId: String) async throws -> User {
-        print("👤 [SupabaseService] Fetching user: \(userId)")
-        let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/profiles?id=eq.\(userId)&select=*") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch user")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch user")
         }
-        
+
         do {
             let users = try JSONDecoder().decode([User].self, from: data)
-            guard let user = users.first else {
-                print("❌ [SupabaseService] User not found")
-                throw SupabaseError.notFound
-            }
-            print("✅ [SupabaseService] Fetched user: \(user.username)")
+            guard let user = users.first else { throw SupabaseError.notFound }
             return user
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
-    func createUser(id: String, username: String, email: String) async throws -> User {
-        print("👤 [SupabaseService] Creating user...")
-        print("👤 [SupabaseService] ID: \(id)")
-        print("👤 [SupabaseService] Username: \(username)")
-        print("👤 [SupabaseService] Email: \(email)")
-        
-        let url = URL(string: "\(baseURL)/rest/v1/profiles")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
-        let userData: [String: Any] = [
-            "id": id,
-            "username": username,
-            "email": email,
-            "is_admin": false,
-            "is_verified": false,
-            "created_at": ISO8601DateFormatter().string(from: Date()),
-            "updated_at": ISO8601DateFormatter().string(from: Date())
-        ]
-        
-        var request = URLRequest(url: url)
-        request.httpMethod = "POST"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        request.httpBody = try JSONSerialization.data(withJSONObject: userData)
-        
-        print("📤 [SupabaseService] Sending POST request...")
-        let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 201 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to create user")
-            }
-        }
-        
-        do {
-            let users = try JSONDecoder().decode([User].self, from: data)
-            guard let user = users.first else {
-                print("❌ [SupabaseService] No user returned")
-                throw SupabaseError.unknown
-            }
-            print("✅ [SupabaseService] Created user: \(user.username)")
-            return user
-        } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
-            throw SupabaseError.decodingError
-        }
-    }
-    
+
     // MARK: - Admin Functions
-    
+
     func fetchAllUsers() async throws -> [User] {
-        print("👥 [SupabaseService] Fetching all users...")
-        let url = URL(string: "\(baseURL)/rest/v1/profiles?select=*")!
-        print("🌐 [SupabaseService] URL: \(url)")
-        
+        guard let url = URL(string: "\(baseURL)/rest/v1/profiles?select=*") else {
+            throw SupabaseError.networkError
+        }
+
         var request = URLRequest(url: url)
         request.httpMethod = "GET"
-        request.allHTTPHeaderFields = getHeaders(useServiceRole: true)
-        
-        print("📤 [SupabaseService] Sending request...")
+        request.allHTTPHeaderFields = getHeaders()
+
         let (data, response) = try await URLSession.shared.data(for: request)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            print("📊 [SupabaseService] Response status: \(httpResponse.statusCode)")
-            if httpResponse.statusCode != 200 {
-                print("❌ [SupabaseService] Error response: \(String(data: data, encoding: .utf8) ?? "nil")")
-                throw SupabaseError.serverError("Failed to fetch users")
-            }
+
+        if let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode != 200 {
+            throw SupabaseError.serverError("Failed to fetch users")
         }
-        
+
         do {
-            let users = try JSONDecoder().decode([User].self, from: data)
-            print("✅ [SupabaseService] Fetched \(users.count) users")
-            return users
+            return try JSONDecoder().decode([User].self, from: data)
         } catch {
-            print("❌ [SupabaseService] Decoding error: \(error)")
             throw SupabaseError.decodingError
         }
     }
-    
+
     func banUser(userId: String) async throws {
-        print("🚫 [SupabaseService] Banning user: \(userId)")
-        print("⚠️ [SupabaseService] Ban user not implemented - requires admin API")
+        // No-op — ban logic would require a `banned` column or auth management
     }
-    
+
     func unbanUser(userId: String) async throws {
-        print("✅ [SupabaseService] Unbanning user: \(userId)")
-        print("⚠️ [SupabaseService] Unban user not implemented - requires admin API")
+        // No-op
     }
-    
+
     // MARK: - Realtime Subscriptions
-    
+
     func subscribeToPosts() -> AsyncStream<Post> {
-        print("📡 [SupabaseService] Setting up realtime subscription to posts...")
-        
         return AsyncStream { continuation in
-            // For now, return an empty stream
-            // Real implementation would use WebSocket connection to Supabase realtime
-            print("⚠️ [SupabaseService] Realtime subscriptions not fully implemented")
             continuation.finish()
         }
     }

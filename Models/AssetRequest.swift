@@ -13,7 +13,7 @@ struct AssetRequest: Identifiable, Codable, Equatable {
     let description: String?
     let status: RequestStatus
     let createdAt: Date
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case userId = "user_id"
@@ -23,36 +23,27 @@ struct AssetRequest: Identifiable, Codable, Equatable {
         case status
         case createdAt = "created_at"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        userId = try container.decode(String.self, forKey: .userId)
-        ticker = try container.decode(String.self, forKey: .ticker)
-        category = try container.decode(AssetCategory.self, forKey: .category)
+        userId = try container.decodeIfPresent(String.self, forKey: .userId) ?? ""
+        ticker = try container.decodeIfPresent(String.self, forKey: .ticker) ?? ""
+        category = try container.decodeIfPresent(AssetCategory.self, forKey: .category) ?? .other
         description = try container.decodeIfPresent(String.self, forKey: .description)
-        status = try container.decode(RequestStatus.self, forKey: .status)
-        
-        // Try ISO8601 first, then fall back to other formats
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        // Decode date as string first, then convert
-        let createdAtString = try container.decode(String.self, forKey: .createdAt)
-        
-        if let createdDate = dateFormatter.date(from: createdAtString) {
-            createdAt = createdDate
-        } else {
-            // Try without fractional seconds
-            dateFormatter.formatOptions = [.withInternetDateTime]
-            if let createdDate = dateFormatter.date(from: createdAtString) {
-                createdAt = createdDate
-            } else {
-                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(createdAtString)")
-            }
-        }
+        status = try container.decodeIfPresent(RequestStatus.self, forKey: .status) ?? .pending
+        createdAt = Self.decodeDate(from: container, key: .createdAt) ?? Date()
     }
-    
+
+    private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Date? {
+        guard let dateString = try? container.decodeIfPresent(String.self, forKey: key) else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: dateString)
+    }
+
     enum AssetCategory: String, Codable, CaseIterable {
         case stock = "stock"
         case stocks = "stocks"
@@ -61,7 +52,13 @@ struct AssetRequest: Identifiable, Codable, Equatable {
         case commodity = "commodity"
         case other = "other"
         case custom = "custom"
-        
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+            self = AssetCategory(rawValue: rawValue.lowercased()) ?? .other
+        }
+
         var displayName: String {
             switch self {
             case .stock, .stocks: return "STOCK"
@@ -72,7 +69,7 @@ struct AssetRequest: Identifiable, Codable, Equatable {
             case .custom: return "CUSTOM"
             }
         }
-        
+
         var color: String {
             switch self {
             case .stock, .stocks: return "#00D4AA"
@@ -84,12 +81,18 @@ struct AssetRequest: Identifiable, Codable, Equatable {
             }
         }
     }
-    
+
     enum RequestStatus: String, Codable {
         case pending = "pending"
         case fulfilled = "fulfilled"
         case rejected = "rejected"
-        
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+            self = RequestStatus(rawValue: rawValue.lowercased()) ?? .pending
+        }
+
         var displayName: String {
             switch self {
             case .pending: return "PENDING"
@@ -98,11 +101,11 @@ struct AssetRequest: Identifiable, Codable, Equatable {
             }
         }
     }
-    
+
     var displayTicker: String {
         return ticker.uppercased()
     }
-    
+
     var formattedTimestamp: String {
         return createdAt.timeAgoDisplay
     }

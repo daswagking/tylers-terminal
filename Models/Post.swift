@@ -18,7 +18,7 @@ struct Post: Identifiable, Codable, Equatable {
     let commentCount: Int
     let createdAt: Date
     let isVerified: Bool
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case authorUsername = "author_username"
@@ -33,47 +33,44 @@ struct Post: Identifiable, Codable, Equatable {
         case createdAt = "created_at"
         case isVerified = "is_verified"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
-        authorUsername = try container.decode(String.self, forKey: .authorUsername)
-        imageUrl = try container.decode(String.self, forKey: .imageUrl)
-        description = try container.decode(String.self, forKey: .description)
+        authorUsername = try container.decodeIfPresent(String.self, forKey: .authorUsername) ?? "anonymous"
+        imageUrl = try container.decodeIfPresent(String.self, forKey: .imageUrl) ?? ""
+        description = try container.decodeIfPresent(String.self, forKey: .description) ?? ""
         ticker = try container.decodeIfPresent(String.self, forKey: .ticker)
-        category = try container.decode(PostCategory.self, forKey: .category)
-        fireCount = try container.decode(Int.self, forKey: .fireCount)
-        hundredCount = try container.decode(Int.self, forKey: .hundredCount)
-        heartCount = try container.decode(Int.self, forKey: .heartCount)
-        commentCount = try container.decode(Int.self, forKey: .commentCount)
-        isVerified = try container.decode(Bool.self, forKey: .isVerified)
-        
-        // Try ISO8601 first, then fall back to other formats
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        // Decode date as string first, then convert
-        let createdAtString = try container.decode(String.self, forKey: .createdAt)
-        
-        if let createdDate = dateFormatter.date(from: createdAtString) {
-            createdAt = createdDate
-        } else {
-            // Try without fractional seconds
-            dateFormatter.formatOptions = [.withInternetDateTime]
-            if let createdDate = dateFormatter.date(from: createdAtString) {
-                createdAt = createdDate
-            } else {
-                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(createdAtString)")
-            }
-        }
+        category = try container.decodeIfPresent(PostCategory.self, forKey: .category) ?? .trade
+        fireCount = try container.decodeIfPresent(Int.self, forKey: .fireCount) ?? 0
+        hundredCount = try container.decodeIfPresent(Int.self, forKey: .hundredCount) ?? 0
+        heartCount = try container.decodeIfPresent(Int.self, forKey: .heartCount) ?? 0
+        commentCount = try container.decodeIfPresent(Int.self, forKey: .commentCount) ?? 0
+        isVerified = try container.decodeIfPresent(Bool.self, forKey: .isVerified) ?? false
+        createdAt = Self.decodeDate(from: container, key: .createdAt) ?? Date()
     }
-    
+
+    private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Date? {
+        guard let dateString = try? container.decodeIfPresent(String.self, forKey: key) else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: dateString)
+    }
+
     enum PostCategory: String, Codable, CaseIterable {
         case trade = "TRADE"
         case analysis = "ANALYSIS"
         case news = "NEWS"
         case question = "QUESTION"
-        
+
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            let rawValue = try container.decode(String.self)
+            self = PostCategory(rawValue: rawValue.uppercased()) ?? .trade
+        }
+
         var displayName: String {
             switch self {
             case .trade: return "TRADE"
@@ -82,7 +79,7 @@ struct Post: Identifiable, Codable, Equatable {
             case .question: return "QUESTION"
             }
         }
-        
+
         var color: String {
             switch self {
             case .trade: return "#FF6B00"
@@ -92,11 +89,11 @@ struct Post: Identifiable, Codable, Equatable {
             }
         }
     }
-    
+
     var formattedTimestamp: String {
         return createdAt.timeAgoDisplay
     }
-    
+
     var userReactions: UserReactions? {
         return nil
     }
@@ -112,7 +109,7 @@ enum ReactionType: String, CaseIterable, Codable {
     case fire = "FIRE"
     case hundred = "HUNDRED"
     case heart = "HEART"
-    
+
     var emoji: String {
         switch self {
         case .fire: return "🔥"
@@ -128,7 +125,7 @@ struct Reaction: Identifiable, Codable {
     let userId: String
     let type: ReactionType
     let createdAt: Date
-    
+
     enum CodingKeys: String, CodingKey {
         case id
         case postId = "post_id"
@@ -136,31 +133,22 @@ struct Reaction: Identifiable, Codable {
         case type
         case createdAt = "created_at"
     }
-    
+
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         id = try container.decode(String.self, forKey: .id)
         postId = try container.decode(String.self, forKey: .postId)
         userId = try container.decode(String.self, forKey: .userId)
-        type = try container.decode(ReactionType.self, forKey: .type)
-        
-        // Try ISO8601 first, then fall back to other formats
-        let dateFormatter = ISO8601DateFormatter()
-        dateFormatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-        
-        // Decode date as string first, then convert
-        let createdAtString = try container.decode(String.self, forKey: .createdAt)
-        
-        if let createdDate = dateFormatter.date(from: createdAtString) {
-            createdAt = createdDate
-        } else {
-            // Try without fractional seconds
-            dateFormatter.formatOptions = [.withInternetDateTime]
-            if let createdDate = dateFormatter.date(from: createdAtString) {
-                createdAt = createdDate
-            } else {
-                throw DecodingError.dataCorruptedError(forKey: .createdAt, in: container, debugDescription: "Invalid date format: \(createdAtString)")
-            }
-        }
+        type = try container.decodeIfPresent(ReactionType.self, forKey: .type) ?? .fire
+        createdAt = Self.decodeDate(from: container, key: .createdAt) ?? Date()
+    }
+
+    private static func decodeDate(from container: KeyedDecodingContainer<CodingKeys>, key: CodingKeys) -> Date? {
+        guard let dateString = try? container.decodeIfPresent(String.self, forKey: key) else { return nil }
+        let formatter = ISO8601DateFormatter()
+        formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
+        if let date = formatter.date(from: dateString) { return date }
+        formatter.formatOptions = [.withInternetDateTime]
+        return formatter.date(from: dateString)
     }
 }
